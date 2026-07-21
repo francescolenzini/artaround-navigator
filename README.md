@@ -81,7 +81,7 @@ quattro sono in `_to_delete/`.
 ## La dockerizzazione, in dettaglio
 
 Due topologie indipendenti, come per backend e Editor. Il Navigator, come
-il Editor, **non include un database**: si collega a un backend già in
+l'Editor, **non include un database**: si collega a un backend già in
 esecuzione altrove.
 
 ### File coinvolti e ruolo di ciascuno
@@ -92,7 +92,7 @@ esecuzione altrove.
 | `docker/Dockerfile.prod` | `docker-compose.prod.yml` (prod) | Multi-stage: uno stage `build` (`node:20-alpine`) esegue `npm ci && npm run build`; lo stage `runtime` (`nginx:1.27-alpine`) serve `dist/` con `nginx.conf` (SPA fallback) ed esegue `docker-entrypoint.d/10-generate-api-config.sh` **all'avvio del container**, prima che nginx parta (meccanismo standard dell'immagine ufficiale nginx: ogni script in `/docker-entrypoint.d/` viene eseguito automaticamente). |
 | `docker/nginx.conf` | `Dockerfile.prod` | `try_files ... /index.html` per il routing lato client di TanStack Router; disabilita la cache su `/api.config.json` (rigenerato a ogni avvio). |
 | `docker/docker-entrypoint.d/10-generate-api-config.sh` | `Dockerfile.prod` (runtime) | Scrive `api.config.json` nella cartella servita da nginx, dalle env `BACKEND_URL` (obbligatoria) e `API_KEY`. |
-| `docker/docker-compose.yml` | sviluppo | Un solo servizio, **`navigator`**. Bind-mount del sorgente + volume dedicato per `node_modules` (ha dipendenze pesanti: React, TanStack, Radix UI, ecc. — a differenza del Editor). |
+| `docker/docker-compose.yml` | sviluppo | Un solo servizio, **`navigator`**. Bind-mount del sorgente + volume dedicato per `node_modules` (ha dipendenze pesanti: React, TanStack, Radix UI, ecc. — a differenza dell'Editor). |
 | `docker/docker-compose.prod.yml` | produzione standalone | Un solo servizio, **`navigator`**. `API_KEY` e `BACKEND_URL` sono **obbligatorie**: il compose si rifiuta di partire se mancano. |
 | `.dockerignore` | entrambe le build | Esclude `node_modules`, `dist`/output di build, `_to_delete/`, la cartella `navigator/` residua, `.git`, e **`app/public/api.config.json`** (il segreto generato a runtime non deve mai finire in un layer immagine). |
 
@@ -118,7 +118,7 @@ tutto dal compose).
 
 ### Come il Navigator raggiunge il backend
 
-Stesso principio del Editor: in sviluppo il compose punta di default a
+Stesso principio dell'Editor: in sviluppo il compose punta di default a
 `http://host.docker.internal:3002` (il backend standalone del repo
 `artaround-backend`, pubblicato sull'host), con:
 
@@ -143,7 +143,7 @@ dockerizzazione.
 
 ### Bind-mount + volume per `node_modules`
 
-Come nel backend (e a differenza del Editor, che non ne ha bisogno): il
+Come nel backend (e a differenza dell'Editor, che non ne ha bisogno): il
 sorgente è bind-montato (`..:/app`) per l'hot-reload, e un volume dedicato
 protegge `node_modules` (`/app/app/node_modules`) da quel bind-mount.
 `CHOKIDAR_USEPOLLING=true` è impostato per compatibilità con bind-mount su
@@ -168,7 +168,7 @@ API_KEY=<chiave-dal-seed-del-backend> docker compose -f docker/docker-compose.ym
 - Se il backend gira su un host/porta diversi: `BACKEND_URL=http://<host>:<porta> docker compose -f docker/docker-compose.yml up -d`
 
 Account demo (password `12345678`): `visitatore1`/`visitatore2` (visitor). Gli
-account `admin`/`autore*` funzionano ma sono pensati per il Editor.
+account `admin`/`autore*` funzionano ma sono pensati per l'Editor.
 
 Stop:
 
