@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { isRichText, sanitizeRichText } from "../lib/richtext";
 
-// Resa tipografica del markup minimo, coerente con l'editor del Marketplace.
+// Resa tipografica del markup minimo, coerente con l'editor dei contenuti.
 const RICH_TEXT_CLASS =
   "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 " +
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 " +
@@ -9,7 +9,7 @@ const RICH_TEXT_CLASS =
 
 /**
  * Renderizza un campo editoriale: HTML minimo sanitizzato se il valore viene
- * dall'editor del Marketplace, testo semplice pre-wrap se è un valore legacy.
+ * dall'editor dei contenuti, testo semplice pre-wrap se è un valore legacy.
  */
 export function RichText({
   value,

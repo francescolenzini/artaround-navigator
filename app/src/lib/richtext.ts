@@ -1,5 +1,5 @@
 // I campi editoriali (descrizione visita, testo a schermo degli item) possono
-// contenere l'HTML minimo prodotto dall'editor del Marketplace (p, br, strong,
+// contenere l'HTML minimo prodotto dall'editor dei contenuti (p, br, strong,
 // em, ul, li, a) oppure testo semplice legacy. Questi helper riducono qualunque
 // input al vocabolario ammesso prima del render e lo spogliano per il TTS.
 // Il campo ttsText resta sempre testo semplice e non passa da qui.

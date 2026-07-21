@@ -49,7 +49,7 @@ function VisitsPage() {
             rel="noreferrer"
             className="flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-sm font-medium"
           >
-            Apri Marketplace ↗
+            Apri Editor ↗
           </a>
           <button
             onClick={logout}
