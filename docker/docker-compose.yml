@@ -1,0 +1,43 @@
+# =============================================================================
+# ArtAround Navigator — SVILUPPO autonomo
+# -----------------------------------------------------------------------------
+# Esegue il Navigator DA SOLO, senza il repo Main. Non include un backend: si
+# collega a un backend già in esecuzione (es. il repo artaround-backend avviato
+# con il suo docker-compose.yml, pubblicato su http://localhost:3002) — stesso
+# principio già adottato per il Marketplace.
+#
+# Eseguire dalla radice del repo Navigator:
+#   docker compose -f docker/docker-compose.yml up -d --build
+#
+# Poi imposta la API key (stampata dal seed del backend) e riavvia:
+#   API_KEY=<chiave-dal-seed> docker compose -f docker/docker-compose.yml up -d
+#
+#   App : http://localhost:5173
+# =============================================================================
+
+name: artaround-navigator
+
+services:
+  navigator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: artaround-navigator:dev
+    container_name: artaround-navigator
+    environment:
+      # Backend raggiunto tramite l'host: se gira nel suo compose standalone
+      # (services/backend), è pubblicato su http://localhost:3002.
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3002}
+      API_KEY: ${API_KEY:-}
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ..:/app
+      - navigator_node_modules:/app/app/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  navigator_node_modules:

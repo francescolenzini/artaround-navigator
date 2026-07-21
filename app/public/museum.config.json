@@ -1,0 +1,18 @@
+{
+  "museumSlug": "galleria-degli-uffizi",
+  "name": "Galleria degli Uffizi",
+  "coverImage": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1200",
+  "mapImage": "https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?w=1200",
+  "floors": [
+    { "floor": 2, "label": "Primo piano", "image": "/maps/uffizi-p1.png" },
+    { "floor": 1, "label": "Secondo piano", "image": "/maps/uffizi-p2.png" }
+  ],
+  "marketplaceUrl": "http://localhost:5174",
+  "logistics": {
+    "exit": "L'uscita principale è al piano terra, seguendo le indicazioni verdi verso Piazzale degli Uffizi.",
+    "toilet": "I bagni si trovano al piano terra e al primo piano, segnalati da appositi pannelli.",
+    "bar": "Il bar è situato all'ingresso al piano terra, sulla sinistra dopo i tornelli.",
+    "shop": "Il bookshop si trova vicino all'uscita principale, al piano terra.",
+    "obstacles": "Attenzione ai gradini tra le sale storiche. Ascensori disponibili per l'accessibilità — rivolgersi al personale."
+  }
+}

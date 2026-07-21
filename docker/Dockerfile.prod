@@ -1,0 +1,39 @@
+# -----------------------------------------------------------------------------
+# ArtAround Navigator — immagine di PRODUZIONE (progetto autonomo)
+# Multi-stage: build della SPA con Vite, poi statici serviti da nginx (scelta
+# idiomatica e collaudata per una SPA buildata; non introduce dipendenze npm
+# nell'app). Nessun bind-mount: i file sono quelli buildati nell'immagine.
+#
+# api.config.json viene generato all'avvio del container dalle variabili
+# d'ambiente (API_KEY, BACKEND_URL), tramite lo script in
+# docker/docker-entrypoint.d/, eseguito automaticamente dall'entrypoint
+# ufficiale dell'immagine nginx prima dell'avvio di nginx stesso.
+#
+# ATTENZIONE: in questa modalità standalone (senza il proxy server-side del
+# repo Main) la apiKey finisce comunque nel bundle servito al browser, esattamente
+# come accade oggi fuori dall'integrazione col Main — vedi il README per il
+# dettaglio. Il deploy finale (Main) inietta la chiave lato server e qui non è
+# mai esposta.
+# -----------------------------------------------------------------------------
+# syntax=docker/dockerfile:1
+
+########################  Stage 1 — build della SPA (Vite)  ###################
+FROM node:20-alpine AS build
+WORKDIR /build
+
+COPY app/package*.json ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+COPY app/ ./
+RUN npm run build
+
+
+########################  Stage 2 — runtime nginx  #############################
+FROM nginx:1.27-alpine AS runtime
+
+COPY --from=build /build/dist/ /usr/share/nginx/html/
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/docker-entrypoint.d/10-generate-api-config.sh /docker-entrypoint.d/10-generate-api-config.sh
+RUN chmod +x /docker-entrypoint.d/10-generate-api-config.sh
+
+EXPOSE 80

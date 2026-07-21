@@ -1,0 +1,30 @@
+# =============================================================================
+# ArtAround Navigator — PRODUZIONE autonoma
+# -----------------------------------------------------------------------------
+# Esegue il Navigator come servizio standalone (build Vite + nginx, senza
+# bind-mount). Richiede un backend già raggiungibile: API_KEY e BACKEND_URL sono
+# OBBLIGATORIE, senza default.
+#
+#   API_KEY=<chiave> BACKEND_URL=https://api.tuo-dominio.it \
+#     docker compose -f docker/docker-compose.prod.yml up -d --build
+#
+# Per il deploy sui due container del dipartimento (un unico container Node che
+# serve anche i frontend statici, con la apiKey iniettata lato server) si usa
+# invece il repo artaround.
+# =============================================================================
+
+name: artaround-navigator-prod
+
+services:
+  navigator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    image: artaround-navigator:prod
+    container_name: artaround-navigator
+    environment:
+      API_KEY: ${API_KEY:?serve API_KEY (la apiKey stampata dal seed del backend)}
+      BACKEND_URL: ${BACKEND_URL:?serve BACKEND_URL (URL pubblico del backend, es. https://api.tuo-dominio.it)}
+    ports:
+      - "${NAVIGATOR_PORT:-8080}:80"
+    restart: unless-stopped
