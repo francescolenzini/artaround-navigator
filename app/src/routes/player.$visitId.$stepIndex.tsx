@@ -70,6 +70,22 @@ function registerLabel(r: LanguageRegister) {
   return r.charAt(0).toUpperCase() + r.slice(1);
 }
 
+// Fonte immagine dell'opera: primo asset di tipo 'image', altrimenti il primo
+// asset con un source (l'immagine vive su Artwork.assets, non sull'item).
+function imageSourceOf(artwork: Artwork | null): string | null {
+  return (
+    artwork?.assets?.find((a) => a.type === "image" && a.source)?.source ??
+    artwork?.assets?.find((a) => a.source)?.source ??
+    null
+  );
+}
+
+// Il source salvato è relativo (/uploads/...): va prefissato con la base URL
+// del backend, a meno che non sia già un URL assoluto.
+function toAbsoluteUrl(baseUrl: string, src: string): string {
+  return /^https?:\/\//i.test(src) ? src : `${baseUrl}${src}`;
+}
+
 function PlayerPage() {
   const { visitId, stepIndex } = Route.useParams();
   const idx = Math.max(0, parseInt(stepIndex, 10) || 0);
@@ -272,6 +288,28 @@ function PlayerPage() {
     }
   }, [apiConfig, token, currentItem]);
 
+  // Opera padre dell'item corrente: caricata subito (non più solo su richiesta
+  // di autore/stile) perché serve l'immagine hero. Riusa getArtwork/artworkCache.
+  const [artwork, setArtwork] = useState<Artwork | null>(null);
+  useEffect(() => {
+    if (!currentItem?.artworkId) {
+      setArtwork(null);
+      return;
+    }
+    let active = true;
+    getArtwork().then((a) => {
+      if (active) setArtwork(a);
+    });
+    return () => {
+      active = false;
+    };
+  }, [currentItem, getArtwork]);
+
+  const heroSrc = useMemo(() => {
+    const src = imageSourceOf(artwork);
+    return src && apiConfig ? toAbsoluteUrl(apiConfig.baseUrl, src) : null;
+  }, [artwork, apiConfig]);
+
   const showAuthor = useCallback(async () => {
     const a = await getArtwork();
     if (a?.artist) {
@@ -446,10 +484,19 @@ function PlayerPage() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto px-5 pb-6 pt-2">
+        {heroSrc && (
+          <img
+            src={heroSrc}
+            alt={currentItem?.content?.title ?? step.title ?? "Opera"}
+            className="mb-4 aspect-[4/3] w-full rounded-2xl border border-border object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        )}
         {(currentItem?.content?.title ?? step.title) && (
           <div className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 shrink-0 rounded-lg bg-secondary" aria-hidden />
               <div className="min-w-0">
                 <h2 className="font-display text-lg font-bold leading-snug">
                   {currentItem?.content?.title ?? step.title}

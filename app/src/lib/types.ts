@@ -81,6 +81,12 @@ export interface Visit {
   steps: VisitStep[];
 }
 
+export interface ArtworkAsset {
+  type?: string;
+  source?: string;
+  description?: string;
+}
+
 export interface Artwork {
   id: string;
   title?: string;
@@ -89,6 +95,7 @@ export interface Artwork {
   category?: string;
   style?: string;
   description?: string;
+  assets?: ArtworkAsset[];
 }
 
 export interface ArtworkItem {
