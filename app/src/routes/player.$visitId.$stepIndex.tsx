@@ -14,7 +14,14 @@ import {
 import { ErrorScreen, LoadingScreen, Modal, Toast } from "../components/Shell";
 import { RichText } from "../components/RichText";
 import { richTextToPlain } from "../lib/richtext";
-import { speak, startRecognition, stopSpeak, type RecognitionHandle } from "../lib/speech";
+import {
+  pauseSpeak,
+  resumeSpeak,
+  speak,
+  startRecognition,
+  stopSpeak,
+  type RecognitionHandle,
+} from "../lib/speech";
 
 export const Route = createFileRoute("/player/$visitId/$stepIndex")({
   component: PlayerPage,
@@ -85,7 +92,9 @@ function PlayerPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const recRef = useRef<RecognitionHandle | null>(null);
-  const [playing, setPlaying] = useState(false);
+  // Stato della riproduzione TTS: "paused" mantiene la posizione (pause/resume
+  // nativi), distinto da "idle" che è il risultato di Stop (distruttivo).
+  const [playState, setPlayState] = useState<"idle" | "speaking" | "paused">("idle");
   // cancel() fa scattare l'onend dell'utterance precedente in modo asincrono:
   // il contatore ignora i callback di utterance ormai superate
   const playSeq = useRef(0);
@@ -93,15 +102,28 @@ function PlayerPage() {
   const playTts = useCallback((text: string) => {
     const id = ++playSeq.current;
     speak(text, () => {
-      if (playSeq.current === id) setPlaying(false);
+      // Fine (o errore) dell'utterance corrente → torna a idle.
+      if (playSeq.current === id) setPlayState("idle");
     });
-    setPlaying(true);
+    setPlayState("speaking");
+  }, []);
+
+  // Pausa/ripresa native: mantengono la posizione di lettura dell'utterance in
+  // corso (a differenza di Stop, che è distruttivo).
+  const pauseTts = useCallback(() => {
+    pauseSpeak();
+    setPlayState("paused");
+  }, []);
+
+  const resumeTts = useCallback(() => {
+    resumeSpeak();
+    setPlayState("speaking");
   }, []);
 
   const stopTts = useCallback(() => {
     playSeq.current++;
     stopSpeak();
-    setPlaying(false);
+    setPlayState("idle");
   }, []);
 
   // Load visit if missing
@@ -291,6 +313,10 @@ function PlayerPage() {
       const has = (...keys: string[]) => keys.some((k) => t.includes(k));
       if (has("prossimo", "avanti")) return goTo(idx + 1);
       if (has("precedente", "indietro")) return goTo(idx - 1);
+      if (has("pausa", "ferma un attimo", "aspetta") && playState === "speaking")
+        return pauseTts();
+      if (has("riprendi", "continua", "riproduci") && playState === "paused")
+        return resumeTts();
       if (has("cos'è questo", "cos è questo", "descrivi"))
         return currentItem?.content?.ttsText && playTts(currentItem.content.ttsText);
       if (has("di più", "di piu", "dimmi di più", "dimmi di piu", "troppo semplice"))
@@ -305,7 +331,19 @@ function PlayerPage() {
       if (has("ostacoli")) return showLogistics("obstacles");
       setToast(`Comando non riconosciuto: "${text}"`);
     },
-    [idx, goTo, currentItem, playTts, goToRegister, showAuthor, showStyle, showLogistics],
+    [
+      idx,
+      goTo,
+      currentItem,
+      playTts,
+      pauseTts,
+      resumeTts,
+      playState,
+      goToRegister,
+      showAuthor,
+      showStyle,
+      showLogistics,
+    ],
   );
 
   const toggleMic = useCallback(() => {
@@ -426,22 +464,35 @@ function PlayerPage() {
             <div className="mt-4 flex w-full gap-2">
               <button
                 onClick={() => {
-                  if (playing) return;
+                  // Il bottone principale cambia comportamento con lo stato:
+                  // speaking → Pausa, paused → Riprendi, idle → Ascolta.
+                  if (playState === "speaking") return pauseTts();
+                  if (playState === "paused") return resumeTts();
                   // Il testo a schermo può contenere markup: al TTS va la
                   // versione in testo semplice, mai i tag.
                   const t = currentItem?.content?.ttsText ?? richTextToPlain(content);
                   if (t) playTts(t);
                 }}
-                className={`flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-all duration-300 ease-in-out ${
-                  playing ? "w-auto cursor-default opacity-60" : "flex-1"
-                }`}
+                aria-label={
+                  playState === "speaking"
+                    ? "Metti in pausa"
+                    : playState === "paused"
+                      ? "Riprendi la lettura"
+                      : "Ascolta"
+                }
+                className="flex min-h-[44px] flex-1 items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-all duration-300 ease-in-out"
               >
-                {playing ? "⏸ In riproduzione" : "▶ Ascolta"}
+                {playState === "speaking"
+                  ? "⏸ Pausa"
+                  : playState === "paused"
+                    ? "▶ Riprendi"
+                    : "▶ Ascolta"}
               </button>
               <button
                 onClick={stopTts}
+                aria-label="Ferma la lettura"
                 className={`flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full border border-border bg-background px-4 text-sm font-semibold transition-all duration-300 ease-in-out ${
-                  playing ? "flex-1" : "w-auto pointer-events-none opacity-40"
+                  playState !== "idle" ? "flex-1" : "w-auto pointer-events-none opacity-40"
                 }`}
               >
                 Stop

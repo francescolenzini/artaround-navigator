@@ -14,6 +14,20 @@ export function stopSpeak() {
   window.speechSynthesis.cancel();
 }
 
+// Pausa/ripresa native: mantengono la posizione di lettura dell'utterance in
+// corso (a differenza di cancel(), che è distruttivo). Nota: su Chrome Android
+// pause()/resume() hanno supporto storicamente incoerente — la UI del player si
+// affida al proprio stato applicativo, non a speechSynthesis.paused.
+export function pauseSpeak() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.pause();
+}
+
+export function resumeSpeak() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.resume();
+}
+
 export type RecognitionHandle = { stop: () => void };
 
 export function startRecognition(
