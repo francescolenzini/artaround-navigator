@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch } from "../lib/api";
+import { apiFetch, toAbsoluteUrl } from "../lib/api";
 import {
   REGISTER_ORDER,
   type Artwork,
@@ -78,12 +78,6 @@ function imageSourceOf(artwork: Artwork | null): string | null {
     artwork?.assets?.find((a) => a.source)?.source ??
     null
   );
-}
-
-// Il source salvato è relativo (/uploads/...): va prefissato con la base URL
-// del backend, a meno che non sia già un URL assoluto.
-function toAbsoluteUrl(baseUrl: string, src: string): string {
-  return /^https?:\/\//i.test(src) ? src : `${baseUrl}${src}`;
 }
 
 function PlayerPage() {

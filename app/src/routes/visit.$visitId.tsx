@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch } from "../lib/api";
+import { apiFetch, toAbsoluteUrl } from "../lib/api";
 import { REGISTER_ORDER, type Visit, type VisitStep } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
 import { RichText } from "../components/RichText";
@@ -64,7 +64,18 @@ function VisitDetail() {
         </Link>
       </div>
       <div className="px-5 pt-1">
-        <div className="h-36 w-full rounded-2xl bg-secondary" aria-hidden />
+        {visit.coverImage && apiConfig ? (
+          <img
+            src={toAbsoluteUrl(apiConfig.baseUrl, visit.coverImage)}
+            alt=""
+            className="h-36 w-full rounded-2xl object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="h-36 w-full rounded-2xl bg-secondary" aria-hidden />
+        )}
         <h1 className="mt-5 text-3xl font-bold leading-tight">{visit.title}</h1>
         {meta && (
           <p className="mt-2 text-sm text-muted-foreground">{meta}</p>

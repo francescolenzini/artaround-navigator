@@ -1,5 +1,13 @@
 import type { ApiConfig } from "./types";
 
+/**
+ * Trasforma un percorso relativo servito dal backend (es. "/uploads/upl-...")
+ * in URL assoluto anteponendo baseUrl. Gli URL già assoluti passano inalterati.
+ */
+export function toAbsoluteUrl(baseUrl: string, src: string): string {
+  return /^https?:\/\//i.test(src) ? src : `${baseUrl}${src}`;
+}
+
 export async function apiFetch<T>(
   cfg: ApiConfig,
   token: string | null,

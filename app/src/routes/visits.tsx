@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch } from "../lib/api";
+import { apiFetch, toAbsoluteUrl } from "../lib/api";
 import type { ListResponse, VisitSummary } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
 
@@ -72,7 +72,18 @@ function VisitsPage() {
             params={{ visitId: v.id }}
             className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition active:scale-[0.98]"
           >
-            <div className="h-14 w-14 shrink-0 rounded-lg bg-secondary" aria-hidden />
+            {v.coverImage && apiConfig ? (
+              <img
+                src={toAbsoluteUrl(apiConfig.baseUrl, v.coverImage)}
+                alt=""
+                className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="h-14 w-14 shrink-0 rounded-lg bg-secondary" aria-hidden />
+            )}
             <div className="min-w-0 flex-1">
               <h3 className="font-display text-base font-bold leading-snug">
                 {v.title}

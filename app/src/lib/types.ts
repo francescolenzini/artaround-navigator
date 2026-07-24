@@ -40,6 +40,7 @@ export interface VisitSummary {
   estimatedDuration?: string;
   estimatedDurationMinutes?: number;
   targetAudience?: string;
+  coverImage?: string;
 }
 
 export type LanguageRegister =
@@ -78,6 +79,7 @@ export interface Visit {
   estimatedDuration?: string;
   estimatedDurationMinutes?: number;
   targetAudience?: string;
+  coverImage?: string;
   steps: VisitStep[];
 }
 
