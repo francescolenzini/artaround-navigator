@@ -48,7 +48,7 @@ function VisitDetail() {
   const artworkCount = visit.steps.filter((s) => stepRegisters(s).length > 0).length;
   const meta = [
     artworkCount > 0 ? `${artworkCount} opere` : null,
-    visit.estimatedDuration,
+    visit.estimatedDurationMinutes ? `${visit.estimatedDurationMinutes} min` : null,
   ]
     .filter(Boolean)
     .join(" · ");

@@ -37,7 +37,6 @@ export interface VisitSummary {
   id: string;
   title: string;
   subtitle?: string;
-  estimatedDuration?: string;
   estimatedDurationMinutes?: number;
   targetAudience?: string;
   coverImage?: string;
@@ -76,7 +75,6 @@ export interface Visit {
   title: string;
   subtitle?: string;
   description?: string;
-  estimatedDuration?: string;
   estimatedDurationMinutes?: number;
   targetAudience?: string;
   coverImage?: string;

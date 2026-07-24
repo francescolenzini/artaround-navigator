@@ -93,12 +93,22 @@ function VisitsPage() {
                   {v.subtitle}
                 </p>
               )}
-              {(v.estimatedDuration || v.targetAudience) && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  <span className="font-semibold text-primary">—</span>{" "}
-                  {[v.estimatedDuration, v.targetAudience]
+              {(v.estimatedDurationMinutes || v.targetAudience) && (
+                <p className="mt-1 flex items-center text-sm text-muted-foreground">
+                  <span className="mr-1.5 font-semibold text-primary">~</span>
+                  {[
+                    v.estimatedDurationMinutes ? `${v.estimatedDurationMinutes} min` : null,
+                    v.targetAudience,
+                  ]
                     .filter(Boolean)
-                    .join(" · ")}
+                    .map((text, i) => (
+                      <span key={text} className="flex items-center">
+                        {i > 0 && (
+                          <span className="mx-2 inline-block h-3 w-px bg-border" aria-hidden />
+                        )}
+                        {text}
+                      </span>
+                    ))}
                 </p>
               )}
             </div>
