@@ -569,7 +569,7 @@ function PlayerPage() {
         />
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+      <main className="flex min-h-0 flex-1 flex-col px-5 pb-4">
         <div className="flex items-baseline justify-between gap-3">
           <div className="font-display text-[19px] font-semibold leading-tight">
             Tappa {String(idx + 1).padStart(2, "0")}{" "}
@@ -590,18 +590,19 @@ function PlayerPage() {
               listening ? "opacity-45" : ""
             }`}
           >
-            {thumbSrc ? (
-              <img
-                src={thumbSrc}
-                alt={artworkTitle}
-                className="h-[58px] w-[58px] shrink-0 rounded-lg border border-border object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            ) : (
-              <div className="h-[58px] w-[58px] shrink-0 rounded-lg bg-secondary" aria-hidden />
-            )}
+            {currentItemId &&
+              (thumbSrc ? (
+                <img
+                  src={thumbSrc}
+                  alt={artworkTitle}
+                  className="h-[58px] w-[58px] shrink-0 rounded-lg border border-border object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="h-[58px] w-[58px] shrink-0 rounded-lg bg-secondary" aria-hidden />
+              ))}
             <div className="min-w-0">
               <h1 className="font-display text-[21px] font-semibold leading-tight tracking-[-0.01em]">
                 {artworkTitle}
@@ -691,7 +692,9 @@ function PlayerPage() {
           </>
         ) : (
           <>
-            <RichText value={content} fallback="—" className="mt-4 text-sm leading-[1.7]" />
+            <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
+              <RichText value={content} fallback="—" className="text-sm leading-[1.7]" />
+            </div>
           </>
         )}
       </main>
