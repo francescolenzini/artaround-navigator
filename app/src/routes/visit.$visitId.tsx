@@ -85,13 +85,13 @@ function VisitDetail() {
       <h2 className="px-5 pt-8 pb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         Tappe
       </h2>
-      <ol className="px-5">
+      <ol className="border-t border-border px-5">
         {visit.steps.map((s, i) => {
           const registers = stepRegisters(s);
           return (
             <li
               key={i}
-              className="flex items-baseline gap-4 border-b border-border py-4 last:border-b-0"
+              className="flex items-start gap-4 border-b border-border py-4 last:border-b-0"
             >
               <span className="w-8 shrink-0 font-display text-lg font-bold tabular-nums">
                 {String(i + 1).padStart(2, "0")}
@@ -138,9 +138,9 @@ function labelForType(t: string) {
     case "logistics_intro":
       return "Logistica";
     case "main_item":
-      return "Opera principale";
+      return "Tappa principale";
     case "optional_item":
-      return "Opera opzionale";
+      return "Tappa opzionale";
     case "transition":
       return "Spostamento";
     default:
@@ -148,16 +148,16 @@ function labelForType(t: string) {
   }
 }
 
-// Livello del contenuto della tappa reso come tipografia/colore: le opere
-// (principale/opzionale) sono pillole, logistica/spostamento sono testo
-// discreto perché non sono opere da visitare.
+// Livello del contenuto della tappa reso solo con tipografia/colore (nessuna
+// pillola): le opere (principale/opzionale) prendono l'accento, logistica/
+// spostamento restano testo discreto perché non sono opere da visitare.
 function badgeClassForType(t: string) {
   const base = "text-[10px] font-semibold uppercase tracking-[0.08em]";
   switch (t) {
     case "main_item":
-      return `${base} inline-block rounded-full bg-primary/10 px-2 py-0.5 text-primary`;
+      return `${base} text-primary`;
     case "optional_item":
-      return `${base} inline-block rounded-full border border-line px-2 py-0.5 text-muted-foreground`;
+      return `${base} text-muted-foreground`;
     default:
       return `${base} text-foreground-subtle`;
   }
