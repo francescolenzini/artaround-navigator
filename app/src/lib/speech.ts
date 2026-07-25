@@ -2,18 +2,12 @@
  * Sintesi vocale (TTS) del racconto e riconoscimento dei comandi.
  *
  * Il racconto non viene dato al browser come un'unica utterance lunga ma spezzato
- * in frasi lette una dopo l'altra. Il motivo è la pausa: `speechSynthesis.pause()`
- * non svuota l'audio già consegnato al motore di sistema, che quindi finisce la
- * parola (a volte la frase) prima di fermarsi davvero. `cancel()` invece è
- * immediato, ma è distruttivo: perde la posizione di lettura. Con una coda di
- * frasi corte e la posizione tenuta qui, la pausa può essere un `cancel()` — taglia
- * l'audio nell'istante del tocco — e la ripresa riparte da dove eravamo.
- *
- * Effetto collaterale gradito: le utterance corte aggirano anche il troncamento
- * che Chrome applica ai testi lunghi.
+ * in frasi lette una dopo l'altra: Chrome tronca le utterance oltre una certa
+ * durata, e una coda di pezzi brevi aggira il problema. Lo spezzettamento non
+ * c'entra con la pausa, che resta quella nativa (vedi `pauseSpeak`).
  */
 
-/** Oltre questa lunghezza un pezzo viene spezzato ancora: frasi corte = pausa reattiva. */
+/** Oltre questa lunghezza un pezzo viene spezzato ancora. */
 const MAX_CHUNK = 180;
 
 const hasSynth = () => typeof window !== "undefined" && "speechSynthesis" in window;
@@ -67,8 +61,6 @@ function hardSplit(s: string, maxLen: number): string[] {
 // passare un handle.
 let chunks: string[] = [];
 let chunkIdx = 0;
-/** Posizione raggiunta dentro il chunk corrente, aggiornata da `onboundary`. */
-let charOffset = 0;
 /** `cancel()` fa scattare l'onend dell'utterance in corso: il contatore ignora i
  *  callback delle utterance ormai superate. */
 let seq = 0;
@@ -77,32 +69,16 @@ let onDone: (() => void) | undefined;
 
 function speakCurrent() {
   if (!hasSynth()) return;
-  const chunk = chunks[chunkIdx];
-  if (chunk == null) return finish();
-
-  const base = charOffset;
-  const text = chunk.slice(base);
-  if (!text) {
-    chunkIdx += 1;
-    charOffset = 0;
-    return speakCurrent();
-  }
+  const text = chunks[chunkIdx];
+  if (text == null) return finish();
 
   const id = ++seq;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "it-IT";
   u.rate = 1;
-  // Dove non è supportato (storicamente Chrome su Android) l'offset resta a 0 e
-  // la ripresa riparte dall'inizio della frase corrente: qualche secondo, non
-  // l'intero racconto.
-  u.onboundary = (e) => {
-    if (seq !== id) return;
-    if (typeof e.charIndex === "number") charOffset = base + e.charIndex;
-  };
   u.onend = () => {
     if (seq !== id) return;
     chunkIdx += 1;
-    charOffset = 0;
     if (chunkIdx >= chunks.length) return finish();
     speakCurrent();
   };
@@ -111,6 +87,15 @@ function speakCurrent() {
     finish();
   };
   window.speechSynthesis.speak(u);
+}
+
+/**
+ * Su Chrome il flag `paused` non si azzera con `cancel()`: se resta alzato, ogni
+ * `speak()` successivo viene accodato e non parte mai. Va sbloccato prima di
+ * accodare o di annullare.
+ */
+function clearPausedFlag() {
+  if (window.speechSynthesis.paused) window.speechSynthesis.resume();
 }
 
 function finish() {
@@ -122,7 +107,6 @@ function finish() {
 function reset() {
   chunks = [];
   chunkIdx = 0;
-  charOffset = 0;
   state = "idle";
   onDone = undefined;
 }
@@ -136,7 +120,6 @@ export function speak(text: string, onEnd?: () => void) {
   if (parts.length === 0) return;
   chunks = parts;
   chunkIdx = 0;
-  charOffset = 0;
   onDone = onEnd;
   state = "speaking";
   speakCurrent();
@@ -146,29 +129,32 @@ export function speak(text: string, onEnd?: () => void) {
 export function stopSpeak() {
   if (!hasSynth()) return;
   seq += 1;
+  clearPausedFlag();
   window.speechSynthesis.cancel();
   reset();
 }
 
 /**
- * Pausa istantanea: `cancel()` taglia subito l'audio, la posizione resta qui.
- * Non si usa `speechSynthesis.pause()` proprio perché lascia finire la parola
- * già in buffer.
+ * Pausa nativa: congela l'utterance in corso, quindi la ripresa riparte esatta,
+ * senza rileggere la parola tagliata. In cambio non è istantanea — il motore di
+ * sistema finisce l'audio che ha già in buffer, di norma la parola corrente.
+ * È un limite della Web Speech API: `cancel()` sarebbe immediato ma perde la
+ * posizione, e non esiste una granularità sotto la parola (né accesso ai
+ * campioni audio) per avere entrambe le cose.
  */
 export function pauseSpeak() {
   if (!hasSynth()) return;
   if (state !== "speaking") return;
-  seq += 1;
-  window.speechSynthesis.cancel();
+  window.speechSynthesis.pause();
   state = "paused";
 }
 
-/** Riprende dal punto memorizzato (parola corrente, o inizio della frase). */
+/** Riprende esattamente dal punto in cui l'audio si era fermato. */
 export function resumeSpeak() {
   if (!hasSynth()) return;
   if (state !== "paused") return;
+  window.speechSynthesis.resume();
   state = "speaking";
-  speakCurrent();
 }
 
 export type RecognitionHandle = { stop: () => void };

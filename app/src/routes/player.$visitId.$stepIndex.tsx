@@ -615,16 +615,16 @@ function PlayerPage() {
           </div>
         )}
 
-        {/* Barra del player: play/pausa a sinistra, Stop a destra. Niente timer —
-            speechSynthesis non espone né durata né posizione dell'utterance. */}
-        <div
-          className={`mt-3.5 flex min-h-[48px] w-full items-stretch rounded-xl transition-colors ${
-            listening ? "bg-foreground text-background" : "bg-surface-muted"
-          }`}
-        >
+        {/* I due bottoni sono l'unico stato del player: l'etichetta principale dice
+            già cosa sta succedendo (Ascolta / Pausa / Riprendi), quindi non serve
+            una barra che lo ripeta. Niente timer, del resto: speechSynthesis non
+            espone né durata né posizione dell'utterance. Lo Stop si allarga solo
+            quando c'è davvero qualcosa da fermare; comando vocale equivalente:
+            "stop". */}
+        <div className="mt-3.5 flex w-full gap-2">
           <button
+            disabled={listening}
             onClick={() => {
-              if (listening) return;
               if (playState === "speaking") return pauseTts();
               if (playState === "paused") return resumeTts();
               // Il testo a schermo può contenere markup: al TTS va la versione in
@@ -633,43 +633,28 @@ function PlayerPage() {
               if (t) playTts(t);
             }}
             aria-label={
-              listening
-                ? "Microfono in ascolto, riproduzione in pausa"
-                : playState === "speaking"
-                  ? "Metti in pausa il racconto"
-                  : playState === "paused"
-                    ? "Riprendi il racconto"
-                    : "Ascolta il racconto"
+              playState === "speaking"
+                ? "Metti in pausa il racconto"
+                : playState === "paused"
+                  ? "Riprendi il racconto"
+                  : "Ascolta il racconto"
             }
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-l-xl px-3.5 py-3 text-left"
+            className="flex min-h-[48px] flex-1 items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-all duration-300 ease-in-out disabled:bg-secondary disabled:text-foreground-subtle"
           >
-            <Equalizer active={listening || playState === "speaking"} inverse={listening} />
-            <span className="min-w-0 truncate text-[11.5px] font-semibold">
-              {listening
-                ? "Sto ascoltando…"
-                : playState === "speaking"
-                  ? "In riproduzione"
-                  : playState === "paused"
-                    ? "In pausa · tocca per riprendere"
-                    : "Tocca per ascoltare"}
-            </span>
-            {listening && (
-              <span className="ml-auto shrink-0 text-[11px] text-background/60">audio in pausa</span>
-            )}
+            {playState === "speaking"
+              ? "⏸ Pausa"
+              : playState === "paused"
+                ? "▶ Riprendi"
+                : "▶ Ascolta"}
           </button>
-
-          {/* Stop = ferma e azzera: la lettura successiva riparte dall'inizio.
-              Occupa sempre lo stesso spazio, così la barra non salta quando si
-              attiva. Comando vocale equivalente: "stop". */}
           <button
             onClick={stopTts}
-            disabled={playState === "idle" || listening}
+            disabled={listening}
             aria-label="Ferma il racconto e riparti dall'inizio"
-            className={`flex shrink-0 items-center gap-1.5 rounded-r-xl border-l px-3.5 text-[11.5px] font-semibold transition-opacity disabled:opacity-35 ${
-              listening ? "border-background/25" : "border-line"
+            className={`flex min-h-[48px] items-center justify-center whitespace-nowrap rounded-full border border-border bg-background px-4 text-sm font-semibold transition-all duration-300 ease-in-out disabled:opacity-40 ${
+              playState !== "idle" ? "flex-1" : "pointer-events-none w-auto opacity-40"
             }`}
           >
-            <span aria-hidden className="h-2.5 w-2.5 rounded-[2px] bg-current" />
             Stop
           </button>
         </div>
@@ -795,77 +780,77 @@ function PlayerPage() {
 
         {/* Ciò che eccede scorre qui dentro invece di uscire dallo schermo. */}
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {listening ? (
-          lastCommand && (
-            <div className="mt-4 rounded-xl border border-border bg-background px-3.5 py-3">
-              <SectionLabel>Ultimo comando</SectionLabel>
-              <p className="mt-1 text-sm font-semibold">
-                {capitalize(lastCommand.label)} → {lastCommand.effect}
-              </p>
-            </div>
-          )
-        ) : (
-          <>
-            <SectionLabel className="mt-4">Oppure tocca un comando</SectionLabel>
-            <div className="mt-2.5 flex items-center gap-2">
-              <button
-                onClick={() => scrollStrip(-1)}
-                aria-label="Scorri i comandi indietro"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-card text-[17px] leading-none"
-              >
-                ‹
-              </button>
-              <div
-                ref={stripRef}
-                onScroll={updateStrip}
-                className="flex flex-1 gap-2 overflow-x-auto scroll-smooth [-webkit-mask-image:linear-gradient(90deg,#000_82%,transparent)] [mask-image:linear-gradient(90deg,#000_82%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {VOICE_COMMANDS.map((c) => {
-                  const { disabled, run } = commandState(c);
-                  return (
-                    <button
-                      key={c.label}
-                      onClick={run}
-                      disabled={disabled}
-                      className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full border border-line bg-secondary px-4 text-[12.5px] font-semibold active:scale-95 disabled:opacity-40 disabled:active:scale-100"
-                    >
-                      {c.label}
-                    </button>
-                  );
-                })}
+          {listening ? (
+            lastCommand && (
+              <div className="mt-4 rounded-xl border border-border bg-background px-3.5 py-3">
+                <SectionLabel>Ultimo comando</SectionLabel>
+                <p className="mt-1 text-sm font-semibold">
+                  {capitalize(lastCommand.label)} → {lastCommand.effect}
+                </p>
               </div>
-              <button
-                onClick={() => scrollStrip(1)}
-                aria-label="Scorri i comandi avanti"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-card text-[17px] leading-none"
-              >
-                ›
-              </button>
-            </div>
-            <div className="mt-2.5 flex justify-center gap-1.5" aria-hidden>
-              {Array.from({ length: stripPages }, (_, i) => (
-                <span
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === stripPage ? "w-4 bg-primary" : "w-1.5 bg-border"
-                  }`}
-                />
-              ))}
-            </div>
-
-            <div className="mt-3.5 flex flex-nowrap gap-1.5 overflow-x-auto border-t border-border pt-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {LOGISTICS.map(({ key, label }) => (
+            )
+          ) : (
+            <>
+              <SectionLabel className="mt-4">Oppure tocca un comando</SectionLabel>
+              <div className="mt-2.5 flex items-center gap-2">
                 <button
-                  key={key}
-                  onClick={() => showLogistics(key)}
-                  className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-secondary px-3.5 text-[11px] text-muted-foreground active:scale-95"
+                  onClick={() => scrollStrip(-1)}
+                  aria-label="Scorri i comandi indietro"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-card text-[17px] leading-none"
                 >
-                  {label}
+                  ‹
                 </button>
-              ))}
-            </div>
-          </>
-        )}
+                <div
+                  ref={stripRef}
+                  onScroll={updateStrip}
+                  className="flex flex-1 gap-2 overflow-x-auto scroll-smooth [-webkit-mask-image:linear-gradient(90deg,#000_82%,transparent)] [mask-image:linear-gradient(90deg,#000_82%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {VOICE_COMMANDS.map((c) => {
+                    const { disabled, run } = commandState(c);
+                    return (
+                      <button
+                        key={c.label}
+                        onClick={run}
+                        disabled={disabled}
+                        className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full border border-line bg-secondary px-4 text-[12.5px] font-semibold active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+                      >
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => scrollStrip(1)}
+                  aria-label="Scorri i comandi avanti"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-card text-[17px] leading-none"
+                >
+                  ›
+                </button>
+              </div>
+              <div className="mt-2.5 flex justify-center gap-1.5" aria-hidden>
+                {Array.from({ length: stripPages }, (_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === stripPage ? "w-4 bg-primary" : "w-1.5 bg-border"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-3.5 flex flex-nowrap gap-1.5 overflow-x-auto border-t border-border pt-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {LOGISTICS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => showLogistics(key)}
+                    className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-secondary px-3.5 text-[11px] text-muted-foreground active:scale-95"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </footer>
 
@@ -886,23 +871,6 @@ function SectionLabel({ children, className }: { children: string; className?: s
     >
       {children}
     </p>
-  );
-}
-
-/** Equalizzatore della barra player: si muove solo quando c'è davvero audio o voce. */
-function Equalizer({ active, inverse }: { active: boolean; inverse?: boolean }) {
-  return (
-    <span className="flex h-[18px] shrink-0 items-end gap-[2.5px]" aria-hidden>
-      {[0, 0.15, 0.3, 0.45, 0.6].map((delay) => (
-        <span
-          key={delay}
-          style={active ? { animationDelay: `${delay}s` } : undefined}
-          className={`w-[3px] origin-bottom rounded-sm ${
-            inverse ? "bg-background" : "bg-primary"
-          } ${active ? "h-full [animation:equalizer_1s_ease-in-out_infinite]" : "h-1/3"}`}
-        />
-      ))}
-    </span>
   );
 }
 
