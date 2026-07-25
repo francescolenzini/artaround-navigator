@@ -4,7 +4,7 @@ import { useApp } from "../lib/AppContext";
 import { apiFetch, toAbsoluteUrl } from "../lib/api";
 import type { ListResponse, VisitSummary } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
-import { AccountMenu, MapPill } from "../components/Nav";
+import { HeaderActions } from "../components/Nav";
 
 export const Route = createFileRoute("/visits")({
   component: VisitsPage,
@@ -38,17 +38,17 @@ function VisitsPage() {
     );
 
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background pb-28 text-foreground">
+    <div className="mx-auto min-h-screen max-w-md bg-background pb-8 text-foreground">
       <header className="px-5 pt-4">
-        {/* Museo a sinistra, account a destra: l'unico controllo dell'header è
-            l'avatar, la mappa vive nella pill flottante in basso. */}
-        <div className="flex items-center justify-between gap-3">
+        {/* Museo a sinistra, mappa + account a destra: come in tutte le altre
+            schermate autenticate. Stessa altezza (pt-4/pb-3) su ogni header. */}
+        <div className="flex items-center justify-between gap-3 pb-3">
           <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
             {museum.name}
           </p>
-          <AccountMenu />
+          <HeaderActions onMap={() => navigate({ to: "/map", search: { from: "visits" } })} />
         </div>
-        <h1 className="mt-1 font-display text-[29px] font-semibold tracking-[-0.02em]">
+        <h1 className="font-display text-[29px] font-semibold tracking-[-0.02em]">
           Visite disponibili
         </h1>
         {/* Intro: spiega il modello applicativo a chi non lo conosce, prima che
@@ -128,9 +128,6 @@ function VisitsPage() {
           </Link>
         ))}
       </div>
-
-      {/* Mappa come overlay globale: raggiungibile anche senza una visita attiva. */}
-      <MapPill variant="float" onClick={() => navigate({ to: "/map", search: { from: "visits" } })} />
     </div>
   );
 }

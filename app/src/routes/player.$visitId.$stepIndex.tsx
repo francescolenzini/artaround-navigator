@@ -13,7 +13,7 @@ import {
 } from "../lib/types";
 import { ErrorScreen, LoadingScreen, Modal, Toast } from "../components/Shell";
 import { RichText } from "../components/RichText";
-import { BackLink, MapPill } from "../components/Nav";
+import { BackLink, HeaderActions } from "../components/Nav";
 import { richTextToPlain } from "../lib/richtext";
 import {
   pauseSpeak,
@@ -549,8 +549,8 @@ function PlayerPage() {
     // Altezza fissa e scorrimento confinato al contenuto: il microfono e i
     // comandi restano sempre visibili, senza doverli cercare scorrendo.
     <div className="mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden bg-card text-foreground">
-      {/* Indietro a sinistra, mappa a destra: le due sole uscite dalla tappa. */}
-      <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-2">
+      {/* Indietro a sinistra, mappa + account a destra: le uscite dalla tappa. */}
+      <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-4 pb-3">
         <BackLink
           label="Torna alla visita"
           onClick={() => {
@@ -558,9 +558,8 @@ function PlayerPage() {
             navigate({ to: "/visit/$visitId", params: { visitId } });
           }}
         />
-        <MapPill
-          variant="header"
-          onClick={() =>
+        <HeaderActions
+          onMap={() =>
             navigate({
               to: "/map/$visitId",
               params: { visitId },
@@ -570,7 +569,7 @@ function PlayerPage() {
         />
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-3">
+      <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
         <div className="flex items-baseline justify-between gap-3">
           <div className="font-display text-[19px] font-semibold leading-tight">
             Tappa {String(idx + 1).padStart(2, "0")}{" "}

@@ -5,7 +5,7 @@ import { apiFetch, toAbsoluteUrl } from "../lib/api";
 import { REGISTER_ORDER, type Visit, type VisitStep } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
 import { RichText } from "../components/RichText";
-import { BackLink } from "../components/Nav";
+import { BackLink, HeaderActions } from "../components/Nav";
 
 export const Route = createFileRoute("/visit/$visitId")({
   component: VisitDetail,
@@ -56,10 +56,17 @@ function VisitDetail() {
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-background pb-32 text-foreground">
-      <div className="sticky top-0 z-10 bg-background/95 px-5 pt-1 backdrop-blur">
-        <BackLink label="Torna alle visite" onClick={() => navigate({ to: "/visits" })} />
+      <div className="sticky top-0 z-10 bg-background/95 px-5 pt-4 pb-3 backdrop-blur">
+        <div className="flex items-center justify-between gap-2">
+          <BackLink label="Torna alle visite" onClick={() => navigate({ to: "/visits" })} />
+          <HeaderActions
+            onMap={() =>
+              navigate({ to: "/map/$visitId", params: { visitId }, search: { from: "visit" } })
+            }
+          />
+        </div>
       </div>
-      <div className="px-5 pt-1">
+      <div className="px-5">
         {visit.coverImage && apiConfig ? (
           <img
             src={toAbsoluteUrl(apiConfig.baseUrl, visit.coverImage)}

@@ -40,36 +40,17 @@ function MapGlyph({ className }: { className?: string }) {
 }
 
 /**
- * Accesso alla mappa. `float` è la variante fuori dalla visita (pill in basso a
- * destra, sempre a portata di pollice); `header` quella dentro il player, dove
- * una pill flottante coprirebbe i comandi del footer.
+ * Accesso alla mappa: pill compatta pensata per stare nell'header di ogni
+ * schermata, accanto all'account (vedi `HeaderActions`).
  */
-export function MapPill({
-  variant,
-  onClick,
-}: {
-  variant: "float" | "header";
-  onClick: () => void;
-}) {
-  if (variant === "header") {
-    return (
-      <button
-        onClick={onClick}
-        className="flex h-[38px] min-h-[38px] shrink-0 items-center gap-2 rounded-full bg-foreground px-3.5 text-background"
-      >
-        <MapGlyph className="border-current" />
-        <span className="text-xs font-semibold">Mappa</span>
-      </button>
-    );
-  }
-
+export function MapPill({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-8 right-5 z-20 flex min-h-[48px] items-center gap-2.5 rounded-full bg-foreground px-[18px] text-background shadow-[0_10px_26px_-8px_rgba(26,26,24,0.6)]"
+      className="flex h-[38px] min-h-[38px] shrink-0 items-center gap-2 rounded-full bg-foreground px-3.5 text-background"
     >
-      <MapGlyph className="h-4 w-5 border-2 border-current" />
-      <span className="text-[13px] font-semibold">Mappa</span>
+      <MapGlyph className="border-current" />
+      <span className="text-xs font-semibold">Mappa</span>
     </button>
   );
 }
@@ -185,6 +166,21 @@ export function AccountMenu() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Cluster destro comune a tutte le schermate autenticate: mappa (se applicabile
+ * alla schermata) + account, sempre in quest'ordine. Il lato sinistro (BackLink
+ * o altro contenuto) resta a carico della route, perché varia da schermata a
+ * schermata.
+ */
+export function HeaderActions({ onMap }: { onMap?: () => void }) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {onMap && <MapPill onClick={onMap} />}
+      <AccountMenu />
     </div>
   );
 }

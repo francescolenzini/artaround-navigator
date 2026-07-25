@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
 import type { FloorConfig, Visit, VisitStep } from "../lib/types";
-import { BackLink } from "./Nav";
+import { AccountMenu, BackLink } from "./Nav";
 
 /**
  * La mappa è un overlay globale, non una destinazione: si apre da qualsiasi
@@ -54,9 +54,12 @@ export function MapView({
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background pb-8 text-foreground">
-      <header className="px-5 pt-3">
-        <BackLink label={backLabel} onClick={onBack} />
-        <h1 className="mt-3 font-display text-[26px] font-semibold tracking-[-0.02em]">
+      <header className="px-5 pt-4">
+        <div className="flex items-center justify-between gap-2 pb-3">
+          <BackLink label={backLabel} onClick={onBack} />
+          <AccountMenu />
+        </div>
+        <h1 className="font-display text-[26px] font-semibold tracking-[-0.02em]">
           Mappa
         </h1>
         {museum?.name && (
