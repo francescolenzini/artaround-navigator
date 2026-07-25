@@ -52,22 +52,20 @@ function VisitsPage() {
           Visite disponibili
         </h1>
         {/* Intro: spiega il modello applicativo a chi non lo conosce, prima che
-            debba dedurlo dai comandi del player. */}
-        <div className="mt-3.5 flex gap-3">
-          <span className="w-0.5 shrink-0 self-stretch bg-primary" aria-hidden />
-          <p className="text-[13.5px] leading-[1.62] text-pretty text-foreground/85">
-            {firstNameOf(user?.fullName) ? (
-              <>
-                Benvenuto <b className="font-semibold">{firstNameOf(user?.fullName)}</b>.{" "}
-              </>
-            ) : (
-              <>Benvenuto. </>
-            )}
-            ArtAround ti guida lungo l'itinerario che scegli: a ogni tappa ascolti il
-            racconto dell'opera e puoi chiedere a voce di dirti di più, di meno, o dove
-            andare.
-          </p>
-        </div>
+            debba dedurlo dai comandi del player. Stessa resa tipografica del
+            paragrafo di descrizione in visit.$visitId.tsx, per coerenza. */}
+        <p className="mt-3.5 text-base leading-relaxed text-muted-foreground">
+          {firstNameOf(user?.fullName) ? (
+            <>
+              Benvenuto <b className="font-semibold text-foreground">{firstNameOf(user?.fullName)}</b>.{" "}
+            </>
+          ) : (
+            <>Benvenuto. </>
+          )}
+          ArtAround ti guida lungo l'itinerario che scegli: a ogni tappa ascolti il
+          racconto dell'opera e puoi chiedere a voce di dirti di più, di meno, o dove
+          andare.
+        </p>
       </header>
 
       <div className="mt-6 flex flex-col gap-3 px-5">
