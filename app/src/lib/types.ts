@@ -67,7 +67,6 @@ export interface VisitStep {
   /** Una tappa = un'opera: al massimo un ArtworkItem.id per registro linguistico. */
   itemsByRegister?: Partial<Record<LanguageRegister, string>>;
   description?: string;
-  directionsFromPrevious?: string;
   mapCoords?: { x: number; y: number; floor?: number };
   order?: number;
 }

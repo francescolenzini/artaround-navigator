@@ -692,17 +692,6 @@ function PlayerPage() {
         ) : (
           <>
             <RichText value={content} fallback="—" className="mt-4 text-sm leading-[1.7]" />
-            {step.directionsFromPrevious && (
-              <div className="mt-5 flex gap-3">
-                <span className="w-0.5 shrink-0 self-stretch bg-primary" aria-hidden />
-                <div>
-                  <SectionLabel>Dalla tappa precedente</SectionLabel>
-                  <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-                    {step.directionsFromPrevious}
-                  </p>
-                </div>
-              </div>
-            )}
           </>
         )}
       </main>
