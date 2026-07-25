@@ -85,8 +85,12 @@ function resolveRegister(
   return best;
 }
 
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 function registerLabel(r: LanguageRegister) {
-  return r.charAt(0).toUpperCase() + r.slice(1);
+  return capitalize(r);
 }
 
 // Fonte immagine dell'opera: primo asset di tipo 'image', altrimenti il primo
@@ -126,27 +130,22 @@ function PlayerPage() {
     null,
   );
   const recRef = useRef<RecognitionHandle | null>(null);
-  // Stato della riproduzione TTS: "paused" mantiene la posizione (pause/resume
-  // nativi), distinto da "idle" che è il risultato di Stop (distruttivo).
+  // Stato della riproduzione TTS: "paused" mantiene la posizione di lettura,
+  // distinto da "idle" che è il risultato di Stop (azzera e riparte da capo).
   const [playState, setPlayState] = useState<"idle" | "speaking" | "paused">("idle");
-  // cancel() fa scattare l'onend dell'utterance precedente in modo asincrono:
-  // il contatore ignora i callback di utterance ormai superate
-  const playSeq = useRef(0);
   // Il racconto va in pausa mentre si parla al microfono e riprende da solo se il
   // comando non ha toccato l'audio (es. "chi è l'autore").
   const resumeAfterListen = useRef(false);
 
   const playTts = useCallback((text: string) => {
-    const id = ++playSeq.current;
-    speak(text, () => {
-      // Fine (o errore) dell'utterance corrente → torna a idle.
-      if (playSeq.current === id) setPlayState("idle");
-    });
+    // `speak` richiama onEnd solo a fine naturale: le interruzioni (pausa, stop,
+    // nuovo testo) sono già filtrate dentro lib/speech.
+    speak(text, () => setPlayState("idle"));
     setPlayState("speaking");
   }, []);
 
-  // Pausa/ripresa native: mantengono la posizione di lettura dell'utterance in
-  // corso (a differenza di Stop, che è distruttivo).
+  // Pausa e ripresa mantengono la posizione di lettura, a differenza di Stop che
+  // è distruttivo.
   const pauseTts = useCallback(() => {
     pauseSpeak();
     setPlayState("paused");
@@ -158,7 +157,6 @@ function PlayerPage() {
   }, []);
 
   const stopTts = useCallback(() => {
-    playSeq.current++;
     stopSpeak();
     setPlayState("idle");
   }, []);
@@ -380,6 +378,12 @@ function PlayerPage() {
         goTo(idx - 1);
         return true;
       }
+      // Prima della pausa: "ferma tutto" azzera, "ferma un attimo" sospende.
+      if (has("stop", "ferma tutto", "basta", "silenzio")) {
+        mark("audio fermato");
+        stopTts();
+        return true;
+      }
       if (has("pausa", "ferma un attimo", "aspetta")) {
         mark("audio in pausa");
         return true;
@@ -432,6 +436,7 @@ function PlayerPage() {
       currentItem,
       playTts,
       resumeTts,
+      stopTts,
       registerInDirection,
       goToRegister,
       showAuthor,
@@ -610,45 +615,64 @@ function PlayerPage() {
           </div>
         )}
 
-        {/* Barra del player: è anche il controllo play/pausa. Niente timer —
+        {/* Barra del player: play/pausa a sinistra, Stop a destra. Niente timer —
             speechSynthesis non espone né durata né posizione dell'utterance. */}
-        <button
-          onClick={() => {
-            if (listening) return;
-            if (playState === "speaking") return pauseTts();
-            if (playState === "paused") return resumeTts();
-            // Il testo a schermo può contenere markup: al TTS va la versione in
-            // testo semplice, mai i tag.
-            const t = currentItem?.content?.ttsText ?? richTextToPlain(content);
-            if (t) playTts(t);
-          }}
-          aria-label={
-            listening
-              ? "Microfono in ascolto, riproduzione in pausa"
-              : playState === "speaking"
-                ? "Metti in pausa il racconto"
-                : playState === "paused"
-                  ? "Riprendi il racconto"
-                  : "Ascolta il racconto"
-          }
-          className={`mt-3.5 flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-colors ${
+        <div
+          className={`mt-3.5 flex min-h-[48px] w-full items-stretch rounded-xl transition-colors ${
             listening ? "bg-foreground text-background" : "bg-surface-muted"
           }`}
         >
-          <Equalizer active={listening || playState === "speaking"} inverse={listening} />
-          <span className="text-[11.5px] font-semibold">
-            {listening
-              ? "Sto ascoltando…"
-              : playState === "speaking"
-                ? "In riproduzione"
-                : playState === "paused"
-                  ? "In pausa · tocca per riprendere"
-                  : "Tocca per ascoltare"}
-          </span>
-          {listening && (
-            <span className="ml-auto text-[11px] text-background/60">audio in pausa</span>
-          )}
-        </button>
+          <button
+            onClick={() => {
+              if (listening) return;
+              if (playState === "speaking") return pauseTts();
+              if (playState === "paused") return resumeTts();
+              // Il testo a schermo può contenere markup: al TTS va la versione in
+              // testo semplice, mai i tag.
+              const t = currentItem?.content?.ttsText ?? richTextToPlain(content);
+              if (t) playTts(t);
+            }}
+            aria-label={
+              listening
+                ? "Microfono in ascolto, riproduzione in pausa"
+                : playState === "speaking"
+                  ? "Metti in pausa il racconto"
+                  : playState === "paused"
+                    ? "Riprendi il racconto"
+                    : "Ascolta il racconto"
+            }
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-l-xl px-3.5 py-3 text-left"
+          >
+            <Equalizer active={listening || playState === "speaking"} inverse={listening} />
+            <span className="min-w-0 truncate text-[11.5px] font-semibold">
+              {listening
+                ? "Sto ascoltando…"
+                : playState === "speaking"
+                  ? "In riproduzione"
+                  : playState === "paused"
+                    ? "In pausa · tocca per riprendere"
+                    : "Tocca per ascoltare"}
+            </span>
+            {listening && (
+              <span className="ml-auto shrink-0 text-[11px] text-background/60">audio in pausa</span>
+            )}
+          </button>
+
+          {/* Stop = ferma e azzera: la lettura successiva riparte dall'inizio.
+              Occupa sempre lo stesso spazio, così la barra non salta quando si
+              attiva. Comando vocale equivalente: "stop". */}
+          <button
+            onClick={stopTts}
+            disabled={playState === "idle" || listening}
+            aria-label="Ferma il racconto e riparti dall'inizio"
+            className={`flex shrink-0 items-center gap-1.5 rounded-r-xl border-l px-3.5 text-[11.5px] font-semibold transition-opacity disabled:opacity-35 ${
+              listening ? "border-background/25" : "border-line"
+            }`}
+          >
+            <span aria-hidden className="h-2.5 w-2.5 rounded-[2px] bg-current" />
+            Stop
+          </button>
+        </div>
 
         {listening ? (
           /* In ascolto il testo lascia il posto a ciò che si può dire adesso. */
@@ -660,21 +684,26 @@ function PlayerPage() {
                   key={c.label}
                   className="rounded-full border border-line bg-card px-3.5 py-2.5 text-center text-[12.5px] font-semibold"
                 >
-                  «{c.label.toLowerCase()}»
+                  {c.label}
                 </span>
               ))}
             </div>
-            <SectionLabel className="mt-4">Info del museo · sempre disponibili</SectionLabel>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {LOGISTICS.map(({ key, label }) => (
-                <span
-                  key={key}
-                  className="rounded-full bg-secondary px-3 py-2 text-[11px] text-muted-foreground"
-                >
-                  «{label.toLowerCase()}»
-                </span>
-              ))}
-            </div>
+            {/* I servizi restano un gruppo unico: pannello quieto invece di pill
+                sciolte, così l'ultima riga spaiata legge come scelta e non come
+                sbavatura. Non sono tappabili — in ascolto si dicono. */}
+            <section className="mt-4 rounded-xl bg-surface-muted px-3.5 py-3.5">
+              <SectionLabel className="text-center">Info del museo</SectionLabel>
+              <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
+                {LOGISTICS.map(({ key, label }) => (
+                  <span
+                    key={key}
+                    className="rounded-full border border-line bg-card px-3 py-1.5 text-[12px] text-muted-foreground"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </section>
           </>
         ) : (
           <>
@@ -694,56 +723,52 @@ function PlayerPage() {
         )}
       </main>
 
-      <footer className="shrink-0 border-t border-border px-5 pb-5 pt-3.5">
+      {/* Il footer può restringersi (niente shrink-0) e tiene il proprio scroll:
+          così la fila di navigazione resta sempre intera e visibile invece di
+          finire tagliata dall'overflow-hidden della schermata. */}
+      <footer className="flex max-h-[55%] min-h-0 flex-col border-t border-border px-5 pb-5 pt-3.5">
         {/* Il microfono sta fra Precedente e Prossimo — posizione già appresa —
-            ed è l'unico elemento pieno d'accento della schermata. */}
-        <div className="flex items-center gap-3">
+            ed è l'unico elemento pieno d'accento della schermata. La didascalia
+            sta su una riga a parte: dentro la colonna del microfono ne detterebbe
+            la larghezza, comprimendo i due bottoni quando il testo cambia. */}
+        <div className="flex shrink-0 items-center gap-3">
           <button
             disabled={isFirst || listening}
             onClick={() => goTo(idx - 1)}
-            className="min-h-[48px] flex-1 rounded-xl border border-line px-2 text-[13px] font-semibold disabled:border-border disabled:text-foreground-subtle"
+            className="min-h-[48px] min-w-0 flex-1 truncate rounded-xl border border-line px-2 text-[13px] font-semibold disabled:border-border disabled:text-foreground-subtle"
           >
             ‹ Precedente
           </button>
 
-          <div className="flex shrink-0 flex-col items-center gap-1.5">
-            <button
-              onClick={toggleMic}
-              aria-label={listening ? "Ferma l'ascolto" : "Parla con la guida"}
-              aria-pressed={listening}
-              className="relative flex h-[68px] w-[68px] items-center justify-center"
-            >
-              {listening && (
-                <>
-                  <span
-                    aria-hidden
-                    className="absolute inset-0 rounded-full bg-primary [animation:mic-ring_1.6s_ease-out_infinite]"
-                  />
-                  <span
-                    aria-hidden
-                    style={{ animationDelay: "0.8s" }}
-                    className="absolute inset-0 rounded-full bg-primary [animation:mic-ring_1.6s_ease-out_infinite]"
-                  />
-                </>
-              )}
-              <span
-                className={`relative flex h-[68px] w-[68px] items-center justify-center rounded-full text-background transition-colors ${
-                  listening
-                    ? "bg-foreground shadow-[0_10px_24px_-6px_rgba(26,26,24,0.5)]"
-                    : "bg-primary shadow-[0_10px_24px_-6px_rgba(210,69,43,0.55)]"
-                }`}
-              >
-                <MicGlyph />
-              </span>
-            </button>
+          <button
+            onClick={toggleMic}
+            aria-label={listening ? "Ferma l'ascolto" : "Parla con la guida"}
+            aria-pressed={listening}
+            className="relative flex h-[68px] w-[68px] shrink-0 items-center justify-center"
+          >
+            {listening && (
+              <>
+                <span
+                  aria-hidden
+                  className="absolute inset-0 rounded-full bg-primary [animation:mic-ring_1.6s_ease-out_infinite]"
+                />
+                <span
+                  aria-hidden
+                  style={{ animationDelay: "0.8s" }}
+                  className="absolute inset-0 rounded-full bg-primary [animation:mic-ring_1.6s_ease-out_infinite]"
+                />
+              </>
+            )}
             <span
-              className={`text-[9.5px] font-semibold uppercase tracking-[0.14em] ${
-                listening ? "text-primary" : "text-foreground-subtle"
+              className={`relative flex h-[68px] w-[68px] items-center justify-center rounded-full text-background transition-colors ${
+                listening
+                  ? "bg-foreground shadow-[0_10px_24px_-6px_rgba(26,26,24,0.5)]"
+                  : "bg-primary shadow-[0_10px_24px_-6px_rgba(210,69,43,0.55)]"
               }`}
             >
-              {listening ? "Tocca per fermare" : "Parla"}
+              <MicGlyph />
             </span>
-          </div>
+          </button>
 
           <button
             disabled={listening}
@@ -752,18 +777,30 @@ function PlayerPage() {
                 ? navigate({ to: "/visit-complete/$visitId", params: { visitId } })
                 : goTo(idx + 1)
             }
-            className="min-h-[48px] flex-1 rounded-xl bg-foreground px-2 text-[13px] font-semibold text-background disabled:bg-secondary disabled:text-foreground-subtle"
+            className="min-h-[48px] min-w-0 flex-1 truncate rounded-xl bg-foreground px-2 text-[13px] font-semibold text-background disabled:bg-secondary disabled:text-foreground-subtle"
           >
             {isLast ? "Fine ✓" : "Prossimo ›"}
           </button>
         </div>
 
+        {/* Didascalia del microfono: fuori dalla fila, così può essere lunga
+            quanto serve senza spostare i bottoni. */}
+        <p
+          className={`mt-2 shrink-0 text-center text-[9.5px] font-semibold uppercase tracking-[0.14em] ${
+            listening ? "text-primary" : "text-foreground-subtle"
+          }`}
+        >
+          {listening ? "Ferma" : "Chiedi a voce"}
+        </p>
+
+        {/* Ciò che eccede scorre qui dentro invece di uscire dallo schermo. */}
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {listening ? (
           lastCommand && (
             <div className="mt-4 rounded-xl border border-border bg-background px-3.5 py-3">
               <SectionLabel>Ultimo comando</SectionLabel>
               <p className="mt-1 text-sm font-semibold">
-                «{lastCommand.label}» → {lastCommand.effect}
+                {capitalize(lastCommand.label)} → {lastCommand.effect}
               </p>
             </div>
           )
@@ -829,6 +866,7 @@ function PlayerPage() {
             </div>
           </>
         )}
+        </div>
       </footer>
 
       {modal && (
