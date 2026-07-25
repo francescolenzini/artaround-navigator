@@ -34,19 +34,34 @@ interface AppState {
 
 const Ctx = createContext<AppState | null>(null);
 
+const TOKEN_KEY = "artaround_token";
+const USER_KEY = "artaround_user";
+
+// L'utente va persistito insieme al token: il menu account mostra nome e ruolo,
+// che altrimenti sparirebbero al primo reload pur restando la sessione valida.
+function readStoredUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [apiConfig, setApiConfig] = useState<ApiConfig | null>(null);
   const [museum, setMuseum] = useState<MuseumConfig | null>(null);
   const [museumReady, setMuseumReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("artaround_token"));
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [user, setUser] = useState<AuthUser | null>(readStoredUser);
   const [visit, setVisit] = useState<Visit | null>(null);
   const [currentItem, setCurrentItem] = useState<ArtworkItem | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const logout = () => {
-    localStorage.removeItem("artaround_token");
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
   };
@@ -64,7 +79,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setApiConfig(api);
         setMuseum(mus);
         setMuseumReady(false);
-        if (!localStorage.getItem("artaround_token")) {
+        if (!localStorage.getItem(TOKEN_KEY)) {
           setLoading(false);
         }
       })
@@ -175,7 +190,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         token,
         user,
         setAuth: (t, u) => {
-          localStorage.setItem("artaround_token", t);
+          localStorage.setItem(TOKEN_KEY, t);
+          localStorage.setItem(USER_KEY, JSON.stringify(u));
           setToken(t);
           setUser(u);
         },

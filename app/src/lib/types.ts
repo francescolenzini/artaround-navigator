@@ -29,6 +29,8 @@ export interface ApiConfig {
 
 export interface AuthUser {
   id: string;
+  /** Nome per esteso: mostrato nel menu account, da cui si ricavano le iniziali. */
+  fullName?: string;
   username: string;
   role: string;
 }

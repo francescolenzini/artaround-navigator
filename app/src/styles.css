@@ -61,6 +61,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-foreground-subtle: var(--foreground-subtle);
 }
 
 /*
@@ -81,6 +84,11 @@
   --palette-graphite: oklch(0.217 0.0038 106.71); /* Grafite #1A1A18 */
   --palette-mute: oklch(0.5363 0.0092 106.7); /* Muto #6E6E68 */
   --palette-vermilion: oklch(0.5867 0.1818 32.65); /* Vermiglio #D2452B */
+  /* Neutri di supporto dell'handoff: separano il bordo dei controlli dal riempimento
+     "pietra" (che coincideva con --border) e danno un terzo livello di testo. */
+  --palette-whisper: oklch(0.9703 0.007 88.64); /* Sussurro #F7F5F0 */
+  --palette-line: oklch(0.9063 0.0097 93.58); /* Filo #E2E0D9 */
+  --palette-faint: oklch(0.6839 0.0115 106.7); /* Tenue #9A9A92 */
 
   /* Token semantici: mappano la palette sui ruoli shadcn/Tailwind */
   --background: var(--palette-canvas);
@@ -102,6 +110,9 @@
   --border: var(--palette-stone);
   --input: var(--palette-stone);
   --ring: var(--palette-vermilion);
+  --surface-muted: var(--palette-whisper);
+  --line: var(--palette-line);
+  --foreground-subtle: var(--palette-faint);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -150,17 +161,33 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --surface-muted: oklch(0.279 0.041 260.031);
+  --line: oklch(1 0 0 / 15%);
+  --foreground-subtle: oklch(0.704 0.04 256.788);
 }
 
-/* Pulsazione dell'outline del microfono in ascolto (Fix 5).
-   Nome distinto da "pulse" per non collidere col keyframe built-in di Tailwind. */
-@keyframes pulse-outline {
+/* Equalizzatore della barra del player: le barre "respirano" solo mentre il TTS
+   parla (l'animazione viene applicata condizionalmente dal componente). */
+@keyframes equalizer {
   0%,
   100% {
-    outline-color: var(--palette-vermilion);
+    transform: scaleY(0.28);
   }
   50% {
-    outline-color: transparent;
+    transform: scaleY(1);
+  }
+}
+
+/* Aloni concentrici del microfono in ascolto: due cerchi sfalsati che si
+   espandono e svaniscono, unico segnale di "sto registrando" della schermata. */
+@keyframes mic-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
   }
 }
 
