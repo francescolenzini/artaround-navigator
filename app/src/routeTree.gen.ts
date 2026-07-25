@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VisitsRouteImport } from './routes/visits'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MapIndexRouteImport } from './routes/map.index'
 import { Route as VisitVisitIdRouteImport } from './routes/visit.$visitId'
 import { Route as VisitCompleteVisitIdRouteImport } from './routes/visit-complete.$visitId'
 import { Route as MapVisitIdRouteImport } from './routes/map.$visitId'
@@ -30,6 +31,11 @@ const LoginRoute = LoginRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapIndexRoute = MapIndexRouteImport.update({
+  id: '/map/',
+  path: '/map/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VisitVisitIdRoute = VisitVisitIdRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/map/$visitId': typeof MapVisitIdRoute
   '/visit-complete/$visitId': typeof VisitCompleteVisitIdRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
+  '/map/': typeof MapIndexRoute
   '/player/$visitId/$stepIndex': typeof PlayerVisitIdStepIndexRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/map/$visitId': typeof MapVisitIdRoute
   '/visit-complete/$visitId': typeof VisitCompleteVisitIdRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
+  '/map': typeof MapIndexRoute
   '/player/$visitId/$stepIndex': typeof PlayerVisitIdStepIndexRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/map/$visitId': typeof MapVisitIdRoute
   '/visit-complete/$visitId': typeof VisitCompleteVisitIdRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
+  '/map/': typeof MapIndexRoute
   '/player/$visitId/$stepIndex': typeof PlayerVisitIdStepIndexRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/map/$visitId'
     | '/visit-complete/$visitId'
     | '/visit/$visitId'
+    | '/map/'
     | '/player/$visitId/$stepIndex'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/map/$visitId'
     | '/visit-complete/$visitId'
     | '/visit/$visitId'
+    | '/map'
     | '/player/$visitId/$stepIndex'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/map/$visitId'
     | '/visit-complete/$visitId'
     | '/visit/$visitId'
+    | '/map/'
     | '/player/$visitId/$stepIndex'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   MapVisitIdRoute: typeof MapVisitIdRoute
   VisitCompleteVisitIdRoute: typeof VisitCompleteVisitIdRoute
   VisitVisitIdRoute: typeof VisitVisitIdRoute
+  MapIndexRoute: typeof MapIndexRoute
   PlayerVisitIdStepIndexRoute: typeof PlayerVisitIdStepIndexRoute
 }
 
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map/': {
+      id: '/map/'
+      path: '/map'
+      fullPath: '/map/'
+      preLoaderRoute: typeof MapIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/visit/$visitId': {
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   MapVisitIdRoute: MapVisitIdRoute,
   VisitCompleteVisitIdRoute: VisitCompleteVisitIdRoute,
   VisitVisitIdRoute: VisitVisitIdRoute,
+  MapIndexRoute: MapIndexRoute,
   PlayerVisitIdStepIndexRoute: PlayerVisitIdStepIndexRoute,
 }
 export const routeTree = rootRouteImport
