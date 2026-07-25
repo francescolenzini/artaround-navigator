@@ -1,16 +1,18 @@
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
 import { apiFetch, toAbsoluteUrl } from "../lib/api";
 import type { ListResponse, VisitSummary } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
+import { AccountMenu, MapPill } from "../components/Nav";
 
 export const Route = createFileRoute("/visits")({
   component: VisitsPage,
 });
 
 function VisitsPage() {
-  const { apiConfig, museum, museumReady, token, logout } = useApp();
+  const { apiConfig, museum, museumReady, token, user } = useApp();
+  const navigate = useNavigate();
   const [visits, setVisits] = useState<VisitSummary[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -36,27 +38,35 @@ function VisitsPage() {
     );
 
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background pb-10 text-foreground">
-      <header className="px-5 pt-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {museum.name} <span className="text-primary">•</span>
-        </p>
-        <h1 className="mt-2 text-3xl font-bold">Visite disponibili</h1>
-        <div className="mt-4 flex gap-2">
-          <a
-            href={museum.marketplaceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-sm font-medium"
-          >
-            Apri Editor ↗
-          </a>
-          <button
-            onClick={logout}
-            className="flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-sm font-medium text-muted-foreground"
-          >
-            Esci
-          </button>
+    <div className="mx-auto min-h-screen max-w-md bg-background pb-28 text-foreground">
+      <header className="px-5 pt-4">
+        {/* Museo a sinistra, account a destra: l'unico controllo dell'header è
+            l'avatar, la mappa vive nella pill flottante in basso. */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+            {museum.name}
+          </p>
+          <AccountMenu />
+        </div>
+        <h1 className="mt-1 font-display text-[29px] font-semibold tracking-[-0.02em]">
+          Visite disponibili
+        </h1>
+        {/* Intro: spiega il modello applicativo a chi non lo conosce, prima che
+            debba dedurlo dai comandi del player. */}
+        <div className="mt-3.5 flex gap-3">
+          <span className="w-0.5 shrink-0 self-stretch bg-primary" aria-hidden />
+          <p className="text-[13.5px] leading-[1.62] text-pretty text-foreground/85">
+            {firstNameOf(user?.fullName) ? (
+              <>
+                Benvenuto <b className="font-semibold">{firstNameOf(user?.fullName)}</b>.{" "}
+              </>
+            ) : (
+              <>Benvenuto. </>
+            )}
+            ArtAround ti guida lungo l'itinerario che scegli: a ogni tappa ascolti il
+            racconto dell'opera e puoi chiedere a voce di dirti di più, di meno, o dove
+            andare.
+          </p>
         </div>
       </header>
 
@@ -118,6 +128,14 @@ function VisitsPage() {
           </Link>
         ))}
       </div>
+
+      {/* Mappa come overlay globale: raggiungibile anche senza una visita attiva. */}
+      <MapPill variant="float" onClick={() => navigate({ to: "/map", search: { from: "visits" } })} />
     </div>
   );
+}
+
+/** Solo il nome di battesimo: "Benvenuto Francesco Lenzini" suona come un badge. */
+function firstNameOf(fullName?: string) {
+  return fullName?.trim().split(/\s+/)[0] ?? null;
 }

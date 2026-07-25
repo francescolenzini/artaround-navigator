@@ -1,10 +1,11 @@
-import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
 import { apiFetch, toAbsoluteUrl } from "../lib/api";
 import { REGISTER_ORDER, type Visit, type VisitStep } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
 import { RichText } from "../components/RichText";
+import { BackLink } from "../components/Nav";
 
 export const Route = createFileRoute("/visit/$visitId")({
   component: VisitDetail,
@@ -55,13 +56,8 @@ function VisitDetail() {
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-background pb-32 text-foreground">
-      <div className="sticky top-0 z-10 bg-background/95 px-5 backdrop-blur">
-        <Link
-          to="/visits"
-          className="flex min-h-[44px] items-center text-sm text-muted-foreground"
-        >
-          ‹ Visite
-        </Link>
+      <div className="sticky top-0 z-10 bg-background/95 px-5 pt-1 backdrop-blur">
+        <BackLink label="Torna alle visite" onClick={() => navigate({ to: "/visits" })} />
       </div>
       <div className="px-5 pt-1">
         {visit.coverImage && apiConfig ? (
