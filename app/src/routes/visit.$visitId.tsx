@@ -97,16 +97,19 @@ function VisitDetail() {
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div className="flex-1">
-                <div className="text-base font-semibold">
-                  {s.title ?? labelForType(s.type)}
-                </div>
-                <div className="mt-0.5 text-sm text-muted-foreground">
-                  {registers.length
-                    ? `Registri: ${registers
-                        .map((r) => r.charAt(0).toUpperCase() + r.slice(1))
-                        .join(", ")}`
-                    : labelForType(s.type)}
-                </div>
+                <span className={badgeClassForType(s.type)}>
+                  {labelForType(s.type)}
+                </span>
+                {s.title && (
+                  <div className="mt-1 text-base font-semibold">{s.title}</div>
+                )}
+                {registers.length > 0 && (
+                  <div className="mt-0.5 text-sm text-muted-foreground">
+                    {`Registri: ${registers
+                      .map((r) => r.charAt(0).toUpperCase() + r.slice(1))
+                      .join(", ")}`}
+                  </div>
+                )}
               </div>
             </li>
           );
@@ -142,5 +145,20 @@ function labelForType(t: string) {
       return "Spostamento";
     default:
       return t;
+  }
+}
+
+// Livello del contenuto della tappa reso come tipografia/colore: le opere
+// (principale/opzionale) sono pillole, logistica/spostamento sono testo
+// discreto perché non sono opere da visitare.
+function badgeClassForType(t: string) {
+  const base = "text-[10px] font-semibold uppercase tracking-[0.08em]";
+  switch (t) {
+    case "main_item":
+      return `${base} inline-block rounded-full bg-primary/10 px-2 py-0.5 text-primary`;
+    case "optional_item":
+      return `${base} inline-block rounded-full border border-line px-2 py-0.5 text-muted-foreground`;
+    default:
+      return `${base} text-foreground-subtle`;
   }
 }
