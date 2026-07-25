@@ -13,7 +13,7 @@ function VisitCompletePage() {
   if (!token) return <Navigate to="/login" />;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background text-foreground">
       <header className="flex justify-end px-5 pt-4 pb-3">
         <HeaderActions onMap={() => navigate({ to: "/map", search: { from: "visits" } })} />
       </header>
