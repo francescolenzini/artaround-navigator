@@ -95,6 +95,11 @@ export function AccountMenu() {
 
   const displayName = user?.fullName?.trim() || user?.username || "Ospite";
   const roleLabel = user?.role ? (ROLE_LABELS[user.role] ?? user.role) : null;
+  // L'Editor rifiuta i visitatori con 403: mostrargli la voce significa
+  // offrirgli una porta chiusa. Allowlist e non `!== "visitor"`, così un ruolo
+  // aggiunto in futuro non eredita l'accesso per distrazione.
+  const canOpenEditor =
+    Boolean(museum?.marketplaceUrl) && (user?.role === "super_admin" || user?.role === "author");
 
   return (
     <div className="relative shrink-0">
@@ -134,11 +139,11 @@ export function AccountMenu() {
                 </div>
               )}
             </div>
-            {museum?.marketplaceUrl && (
+            {canOpenEditor && (
               <>
                 <div className="h-px bg-border" />
                 <a
-                  href={museum.marketplaceUrl}
+                  href={museum!.marketplaceUrl}
                   target="_blank"
                   rel="noreferrer"
                   role="menuitem"
