@@ -1,5 +1,13 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Coffee,
+  DoorOpen,
+  ShoppingBag,
+  Toilet,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { apiFetch, getErrorMessage, toAbsoluteUrl } from "../lib/api";
 import {
@@ -73,12 +81,16 @@ const COMMAND_GROUPS: { label: string; commands: VoiceCommand[] }[] = [
   },
 ];
 
-const LOGISTICS: { key: LogisticsKey; label: string }[] = [
-  { key: "exit", label: "Uscita" },
-  { key: "toilet", label: "Toilette" },
-  { key: "bar", label: "Bar" },
-  { key: "shop", label: "Shop" },
-  { key: "obstacles", label: "Ostacoli" },
+// L'icona affianca l'etichetta, non la sostituisce: il chip resta leggibile a
+// colpo d'occhio anche per chi non riconosce il pittogramma. Qui si usa lucide
+// (già in dipendenza) invece dei glifi disegnati a mano come MicGlyph: cinque
+// pittogrammi distinti non si rendono decentemente con i soli bordi CSS.
+const LOGISTICS: { key: LogisticsKey; label: string; Icon: LucideIcon }[] = [
+  { key: "exit", label: "Uscita", Icon: DoorOpen },
+  { key: "toilet", label: "Toilette", Icon: Toilet },
+  { key: "bar", label: "Bar", Icon: Coffee },
+  { key: "shop", label: "Shop", Icon: ShoppingBag },
+  { key: "obstacles", label: "Ostacoli", Icon: TriangleAlert },
 ];
 
 type LogisticsKey = "exit" | "toilet" | "bar" | "shop" | "obstacles";
@@ -883,12 +895,13 @@ function LogisticsPanel({ onSelect }: { onSelect: (key: LogisticsKey) => void })
     <section>
       <SectionLabel>Info del museo</SectionLabel>
       <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {LOGISTICS.map(({ key, label }) => (
+        {LOGISTICS.map(({ key, label, Icon }) => (
           <button
             key={key}
             onClick={() => onSelect(key)}
-            className="rounded-full border border-line bg-surface-muted px-3 py-1.5 text-[12px] text-muted-foreground active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-line bg-surface-muted px-3 py-1.5 text-[12px] text-muted-foreground active:scale-95"
           >
+            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {label}
           </button>
         ))}
