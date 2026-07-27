@@ -1,18 +1,6 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import type {
-  ApiConfig,
-  ArtworkItem,
-  AuthUser,
-  ListResponse,
-  MuseumConfig,
-  Visit,
-} from "./types";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { ApiConfig, ArtworkItem, AuthUser, ListResponse, MuseumConfig, Visit } from "./types";
+import { getErrorMessage, readError } from "./api";
 
 interface AppState {
   apiConfig: ApiConfig | null;
@@ -85,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       .catch((e) => {
         if (cancel) return;
-        setError(e?.message ?? "Errore caricamento configurazione");
+        setError(getErrorMessage(e, "Configurazione del museo non disponibile. Riprova."));
         setLoading(false);
       });
     return () => {
@@ -123,12 +111,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           );
 
           if (!museumResponse.ok) {
-            const text = await museumResponse.text().catch(() => "");
             if (museumResponse.status === 401) {
               logout();
               return;
             }
-            throw new Error(text || museumResponse.statusText || "Errore risoluzione museo");
+            throw await readError(museumResponse, "/museums?slug=…");
           }
 
           const payload = (await museumResponse.json()) as ListResponse<{
@@ -160,13 +147,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (response.status === 401) {
             logout();
           } else {
-            const text = await response.text().catch(() => "");
-            setError(text || response.statusText || "Errore validazione sessione");
+            setError((await readError(response, "/visits")).message);
           }
         }
-      } catch (e: any) {
+      } catch (e) {
         if (!cancel) {
-          setError(e?.message ?? "Errore validazione sessione");
+          setError(getErrorMessage(e, "Sessione non verificabile. Riprova."));
         }
       } finally {
         if (!cancel) {

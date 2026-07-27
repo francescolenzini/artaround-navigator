@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch } from "../lib/api";
+import { ApiError, apiFetch, getErrorMessage } from "../lib/api";
 import type { AuthUser } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
 
@@ -34,8 +34,16 @@ function LoginPage() {
       );
       setAuth(res.token, res.user);
       navigate({ to: "/visits" });
-    } catch (e: any) {
-      setErr(e?.message ?? "Login fallito");
+    } catch (e) {
+      // Sul login i messaggi generici di friendlyMessage non vanno bene: "sessione
+      // scaduta" per un 401 è fuorviante quando la sessione non è mai iniziata.
+      if (e instanceof ApiError && e.status === 401) {
+        setErr("Username o password non corretti.");
+      } else if (e instanceof ApiError && e.status === 400) {
+        setErr("Inserisci username e password per accedere.");
+      } else {
+        setErr(getErrorMessage(e, "Accesso non riuscito. Riprova."));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -83,7 +91,10 @@ function LoginPage() {
             />
           </label>
           {err && (
-            <div className="rounded-lg border border-destructive/40 bg-card p-3 text-sm text-destructive">
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/40 bg-card p-3 text-sm text-destructive"
+            >
               {err}
             </div>
           )}
