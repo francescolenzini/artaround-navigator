@@ -15,12 +15,19 @@ export function BackLink({ label, onClick }: { label: string; onClick: () => voi
   return (
     <button
       onClick={onClick}
-      className="-ml-1 inline-flex min-h-[44px] items-center gap-2 px-1 text-left"
+      className="-ml-1 inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 px-1 text-left text-muted-foreground transition-colors hover:text-foreground active:text-foreground"
     >
-      <span className="text-[22px] leading-none text-foreground" aria-hidden>
-        ‹
-      </span>
-      <span className="text-[13px] font-semibold text-muted-foreground">{label}</span>
+      <svg
+        className="h-4 w-4 shrink-0"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      <span className="text-[13px] font-semibold leading-none">{label}</span>
     </button>
   );
 }
@@ -112,14 +119,10 @@ export function AccountMenu() {
       {open && (
         <>
           {/* Scrim: cattura il tap fuori e mette in secondo piano la schermata. */}
-          <div
-            className="fixed inset-0 z-30 bg-foreground/30"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
+          <div className="fixed inset-0 z-50 bg-scrim" onClick={() => setOpen(false)} aria-hidden />
           <div
             role="menu"
-            className="absolute right-0 top-[46px] z-40 w-[232px] overflow-hidden rounded-2xl border border-border bg-card shadow-[0_22px_48px_-18px_rgba(26,26,24,0.55)]"
+            className="absolute right-0 top-[46px] z-[51] w-[232px] overflow-hidden rounded-2xl border border-border bg-card shadow-popover"
           >
             <div className="px-4 pb-3 pt-4">
               <div className="font-display text-[15px] font-semibold leading-tight">
@@ -140,7 +143,7 @@ export function AccountMenu() {
                   rel="noreferrer"
                   role="menuitem"
                   onClick={() => setOpen(false)}
-                  className="flex min-h-[48px] items-center justify-between px-4 text-sm font-semibold"
+                  className="flex min-h-[48px] items-center justify-between px-4 text-sm font-semibold transition-colors hover:bg-secondary active:bg-secondary/80"
                 >
                   Apri Editor
                   <span className="text-foreground-subtle" aria-hidden>
@@ -156,7 +159,7 @@ export function AccountMenu() {
                 setOpen(false);
                 logout();
               }}
-              className="flex min-h-[48px] w-full items-center justify-between px-4 text-sm font-semibold text-primary"
+              className="flex min-h-[48px] w-full items-center justify-between px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 active:bg-primary/20"
             >
               Esci
               <span className="text-primary/50" aria-hidden>

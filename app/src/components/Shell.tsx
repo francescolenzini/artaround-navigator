@@ -35,12 +35,15 @@ export function Modal({
   onClose: () => void;
 }) {
   return (
+    // Stesso velo degli altri overlay dell'app: aperto dalla tendina dei comandi
+    // il Modal ci si sovrappone, e i due veli sommandosi danno la profondità —
+    // dove un nero pieno faceva uno stacco brusco a metà del gesto.
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-4 backdrop-blur-[3px] sm:items-center"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-popover"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-3 text-xl font-bold text-primary">{title}</h2>
