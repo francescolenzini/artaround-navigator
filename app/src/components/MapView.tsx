@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
 import type { FloorConfig, Visit, VisitStep } from "../lib/types";
+import { useMapZoomPan } from "../lib/useMapZoomPan";
 import { AccountMenu, BackLink } from "./Nav";
 
 /**
@@ -23,6 +24,7 @@ export function MapView({
 }) {
   const { museum } = useApp();
   const [activePin, setActivePin] = useState<number | null>(currentStepIndex);
+  const map = useMapZoomPan();
 
   // I piani (etichetta + immagine mappa) arrivano dalla configurazione del museo,
   // così il Navigator resta generico e multi-museo. Fallback a un'unica mappa
@@ -36,9 +38,8 @@ export function MapView({
   // Si apre sul piano della tappa di provenienza, non sul primo della lista:
   // chi arriva dal player si aspetta di vedersi già sulla mappa giusta.
   const startFloor =
-    (currentStepIndex != null
-      ? visit?.steps[currentStepIndex]?.mapCoords?.floor
-      : undefined) ?? floors[0].floor;
+    (currentStepIndex != null ? visit?.steps[currentStepIndex]?.mapCoords?.floor : undefined) ??
+    floors[0].floor;
   const [floor, setFloor] = useState<number>(startFloor);
 
   // Allinea il piano selezionato quando la config del museo diventa disponibile.
@@ -51,6 +52,16 @@ export function MapView({
   const mapSrc = floors.find((f) => f.floor === floor)?.image ?? floors[0].image;
   const selected = activePin != null ? visit?.steps[activePin] : undefined;
   const total = visit?.steps.length ?? 0;
+  const { view, natural } = map;
+
+  const changeFloor = (next: number) => {
+    // Solo a piano diverso: ritoccando quello attivo l'immagine non si rimonta,
+    // quindi `onLoad` non riparte e la pianta resterebbe nascosta per sempre.
+    if (next === floor) return;
+    setFloor(next);
+    setActivePin(null);
+    map.resetForNewImage();
+  };
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background pb-8 text-foreground">
@@ -59,12 +70,8 @@ export function MapView({
           <BackLink label={backLabel} onClick={onBack} />
           <AccountMenu />
         </div>
-        <h1 className="font-display text-[26px] font-semibold tracking-[-0.02em]">
-          Mappa
-        </h1>
-        {museum?.name && (
-          <p className="mt-1 text-xs text-muted-foreground">{museum.name}</p>
-        )}
+        <h1 className="font-display text-[26px] font-semibold tracking-[-0.02em]">Mappa</h1>
+        {museum?.name && <p className="mt-1 text-xs text-muted-foreground">{museum.name}</p>}
       </header>
 
       {/* Selettore piano (solo se il museo ha più piani) */}
@@ -73,10 +80,7 @@ export function MapView({
           {floors.map(({ floor: f, label }) => (
             <button
               key={f}
-              onClick={() => {
-                setFloor(f);
-                setActivePin(null);
-              }}
+              onClick={() => changeFloor(f)}
               className={`min-h-[44px] flex-1 rounded-lg px-3 text-xs font-semibold transition-colors ${
                 floor === f
                   ? "bg-foreground text-background"
@@ -89,42 +93,87 @@ export function MapView({
         </div>
       )}
 
-      {/* Planimetria con i pin del percorso */}
+      {/* Planimetria: zoom e pan dentro un riquadro di altezza fissa. Immagine e
+          pin stanno nello stesso stage trasformato, così restano allineati. */}
       <div className="px-5 pt-3.5">
-        <div className="w-full overflow-auto rounded-2xl border border-border bg-secondary">
-          {/* si espande con l'immagine: i pin in % restano allineati */}
-          <div className="relative w-[150%]">
-            <img
-              src={mapSrc}
-              alt={singleFloor ? "Mappa del museo" : `Mappa piano ${floor}`}
-              className="block w-full max-w-none"
-            />
-            {pins.map(({ i, s, x, y, dx, dy }) => {
-              const isCurrent = i === currentStepIndex;
-              const isActive = i === activePin;
-              return (
-                <button
-                  key={i}
-                  onClick={() => setActivePin(isActive ? null : i)}
-                  title={s.title}
-                  style={{
-                    left: `${x}%`,
-                    top: `${y}%`,
-                    // L'offset anti-sovrapposizione è in pixel dentro la transform:
-                    // in percentuale dipendeva dalla larghezza della mappa e a 390px
-                    // restava più piccolo del pin stesso.
-                    transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`,
-                  }}
-                  className={`absolute flex h-8 w-8 items-center justify-center rounded-full font-display text-xs font-bold shadow-md transition-[outline-color,box-shadow] ${
-                    isCurrent
-                      ? "bg-primary text-primary-foreground outline outline-[3px] outline-primary/25"
-                      : "bg-foreground text-background"
-                  } ${isActive ? "outline outline-[3px] outline-foreground/30" : ""}`}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </button>
-              );
-            })}
+        <div className="relative">
+          <div
+            ref={map.containerRef}
+            {...map.pointerHandlers}
+            className="relative h-[min(56vh,440px)] min-h-[240px] w-full touch-none select-none overflow-hidden rounded-2xl border border-border bg-secondary"
+          >
+            <div
+              className="absolute left-0 top-0 will-change-transform"
+              style={{
+                width: natural?.w,
+                height: natural?.h,
+                transform: `translate3d(${view.tx}px, ${view.ty}px, 0) scale(${view.scale})`,
+                transformOrigin: "0 0",
+                visibility: natural ? "visible" : "hidden",
+              }}
+            >
+              <img
+                key={mapSrc}
+                src={mapSrc}
+                alt={singleFloor ? "Mappa del museo" : `Mappa piano ${floor}`}
+                onLoad={map.onImageLoad}
+                draggable={false}
+                className="block h-full w-full select-none"
+              />
+              {natural &&
+                pins.map(({ i, s, x, y, dx, dy }) => {
+                  const isCurrent = i === currentStepIndex;
+                  const isActive = i === activePin;
+                  return (
+                    <button
+                      key={i}
+                      data-pin
+                      onClick={() => setActivePin(isActive ? null : i)}
+                      title={s.title}
+                      style={{
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        // Il counter-scale tiene il pin grande uguale a ogni zoom;
+                        // messo prima delle traslazioni, anche il centraggio e
+                        // l'offset anti-sovrapposizione restano in pixel di
+                        // schermo invece di crescere con la pianta.
+                        transform: `scale(${1 / view.scale}) translate(-50%, -50%) translate(${dx}px, ${dy}px)`,
+                        transformOrigin: "0 0",
+                      }}
+                      className={`absolute flex h-8 w-8 items-center justify-center rounded-full font-display text-xs font-bold shadow-md transition-[outline-color,box-shadow] ${
+                        isCurrent
+                          ? "bg-primary text-primary-foreground outline outline-[3px] outline-primary/25"
+                          : "bg-foreground text-background"
+                      } ${isActive ? "outline outline-[3px] outline-foreground/30" : ""}`}
+                    >
+                      {String(i + 1).padStart(2, "0")}
+                    </button>
+                  );
+                })}
+            </div>
+
+            {!natural && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+                Caricamento mappa…
+              </div>
+            )}
+          </div>
+
+          {/* Controlli zoom: equivalente a bottoni dei gesti, per chi non li usa */}
+          <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 flex-col gap-1.5">
+            <ZoomButton label="Ingrandisci" onClick={map.zoomIn}>
+              <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+            </ZoomButton>
+            <ZoomButton label="Riduci" onClick={map.zoomOut}>
+              <path strokeLinecap="round" d="M5 12h14" />
+            </ZoomButton>
+            <ZoomButton label="Adatta al riquadro" onClick={map.reset}>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"
+              />
+            </ZoomButton>
           </div>
         </div>
       </div>
@@ -159,7 +208,7 @@ export function MapView({
               ? "Nessuna visita in corso: questa è la pianta del museo."
               : pins.length === 0
                 ? "Nessuna tappa di questa visita su questo piano."
-                : "Tocca un pin per vedere di che tappa si tratta."}
+                : "Pizzica per lo zoom, tocca un pin per vedere la tappa."}
           </p>
         )}
         {visit && currentStepIndex != null && (
@@ -169,6 +218,37 @@ export function MapView({
         )}
       </div>
     </div>
+  );
+}
+
+/** Bottone tondo dei controlli zoom: icona disegnata, nessuna libreria. */
+function ZoomButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/90 text-foreground shadow-md backdrop-blur transition-transform active:scale-95"
+    >
+      <svg
+        className="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden
+      >
+        {children}
+      </svg>
+    </button>
   );
 }
 
@@ -196,6 +276,8 @@ function layoutPins(steps: VisitStep[], floor: number, singleFloor: boolean) {
     // per mantenere la stessa distanza minima fra pin adiacenti.
     const radius = n === 1 ? 0 : Math.max(22, (18 * n) / Math.PI);
     return items.map(({ s, i }, idx) => {
+      // Spread simmetrico che parte dall'alto: il cluster resta centrato sulla
+      // coordinata dell'opera, senza bias verso destra.
       const angle = ((2 * Math.PI) / n) * idx - Math.PI / 2;
       return {
         s,
