@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch, toAbsoluteUrl } from "../lib/api";
+import { apiFetch, getErrorMessage, toAbsoluteUrl } from "../lib/api";
 import type { Visit } from "../lib/types";
 import { ErrorScreen } from "../components/Shell";
 import { RichText } from "../components/RichText";
@@ -29,7 +29,7 @@ function VisitDetail() {
         setLocalVisit(v);
         setVisit(v);
       })
-      .catch((e) => setErr(e?.message ?? "Errore"));
+      .catch((e) => setErr(getErrorMessage(e)));
   }, [apiConfig, token, visitId, reloadKey, setVisit]);
 
   useEffect(() => {

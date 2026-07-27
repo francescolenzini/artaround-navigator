@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch, toAbsoluteUrl } from "../lib/api";
+import { apiFetch, getErrorMessage, toAbsoluteUrl } from "../lib/api";
 import {
   type Artwork,
   type ArtworkItem,
@@ -188,7 +188,7 @@ function PlayerPage() {
         setLocalVisit(v);
         setVisit(v);
       })
-      .catch((e) => setErr(e?.message ?? "Errore"));
+      .catch((e) => setErr(getErrorMessage(e)));
   }, [apiConfig, token, visitId, visit, setVisit]);
 
   const step = visit?.steps[idx];

@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch } from "../lib/api";
+import { apiFetch, getErrorMessage } from "../lib/api";
 import type { Visit } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
 import { MapView } from "../components/MapView";
@@ -29,7 +29,7 @@ function MapPage() {
         setLocalVisit(v);
         setVisit(v);
       })
-      .catch((e) => setErr(e?.message ?? "Errore"));
+      .catch((e) => setErr(getErrorMessage(e)));
   }, [apiConfig, token, visitId, visit, setVisit]);
 
   if (!token) return <Navigate to="/login" />;

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import { apiFetch, toAbsoluteUrl } from "../lib/api";
+import { apiFetch, getErrorMessage, toAbsoluteUrl } from "../lib/api";
 import type { ListResponse, VisitSummary } from "../lib/types";
 import { ErrorScreen, LoadingScreen } from "../components/Shell";
 import { HeaderActions } from "../components/Nav";
@@ -27,7 +27,7 @@ function VisitsPage() {
       `/visits?museumId=${encodeURIComponent(museum.museumId)}&pageSize=50`,
     )
       .then((r) => setVisits(r.data))
-      .catch((e) => setErr(e?.message ?? "Errore"));
+      .catch((e) => setErr(getErrorMessage(e)));
   }, [apiConfig, museum, museumReady, token, reloadKey]);
 
   if (!token) return <Navigate to="/login" />;
