@@ -64,8 +64,14 @@ export interface VisitStep {
   id: string;
   type: "logistics_intro" | "main_item" | "optional_item" | "transition";
   title?: string;
-  /** Una tappa = un'opera: al massimo un ArtworkItem.id per registro linguistico. */
-  itemsByRegister?: Partial<Record<LanguageRegister, string>>;
+  /**
+   * Una tappa = un'opera, con tutte le sue varianti disponibili in visita.
+   * Registro e durata di ciascuna si leggono da `ArtworkItem.classification`:
+   * la griglia dei due assi la costruisce `lib/itemVariants.ts`, non lo step.
+   */
+  itemIds?: string[];
+  /** Registro proposto per primo nel player, prima della preferenza del visitatore. */
+  defaultRegister?: LanguageRegister;
   description?: string;
   mapCoords?: { x: number; y: number; floor?: number };
   order?: number;
@@ -104,7 +110,10 @@ export interface ArtworkItem {
   artworkId: string;
   classification?: {
     languageRegister?: string;
+    /** Durata dichiarata dall'autore, formato `{n}min` (o `{n}s` per i valori storici). */
     fruitionLength?: string;
+    /** Stima dell'Editor dal conteggio parole: ripiego quando `fruitionLength` manca. */
+    targetDurationSeconds?: number;
   };
   content: {
     title?: string;
