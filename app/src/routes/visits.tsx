@@ -73,58 +73,66 @@ function VisitsPage() {
         {visits?.length === 0 && (
           <p className="text-muted-foreground">Nessuna visita disponibile.</p>
         )}
-        {visits?.map((v) => (
-          <Link
-            key={v.id}
-            to="/visit/$visitId"
-            params={{ visitId: v.id }}
-            className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition active:scale-[0.98]"
-          >
-            {v.coverImage && apiConfig ? (
-              <img
-                src={toAbsoluteUrl(apiConfig.baseUrl, v.coverImage)}
-                alt=""
-                className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            ) : (
-              <div className="h-14 w-14 shrink-0 rounded-lg bg-secondary" aria-hidden />
-            )}
-            <div className="min-w-0 flex-1">
-              <h3 className="font-display text-base font-bold leading-snug">
-                {v.title}
-              </h3>
-              {v.subtitle && (
-                <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                  {v.subtitle}
-                </p>
+        {visits?.map((v) => {
+          const coverSrc =
+            v.coverImage && apiConfig
+              ? toAbsoluteUrl(apiConfig.baseUrl, v.coverImage)
+              : museum.coverImage && apiConfig
+                ? toAbsoluteUrl(apiConfig.baseUrl, museum.coverImage)
+                : undefined;
+          return (
+            <Link
+              key={v.id}
+              to="/visit/$visitId"
+              params={{ visitId: v.id }}
+              className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition active:scale-[0.98]"
+            >
+              {coverSrc ? (
+                <img
+                  src={coverSrc}
+                  alt=""
+                  className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="h-14 w-14 shrink-0 rounded-lg bg-secondary" aria-hidden />
               )}
-              {(v.estimatedDurationMinutes || v.targetAudience) && (
-                <p className="mt-1 flex items-center text-sm text-muted-foreground">
-                  <span className="mr-1.5 font-semibold text-primary">~</span>
-                  {[
-                    v.estimatedDurationMinutes ? `${v.estimatedDurationMinutes} min` : null,
-                    v.targetAudience,
-                  ]
-                    .filter(Boolean)
-                    .map((text, i) => (
-                      <span key={text} className="flex items-center">
-                        {i > 0 && (
-                          <span className="mx-2 inline-block h-3 w-px bg-border" aria-hidden />
-                        )}
-                        {text}
-                      </span>
-                    ))}
-                </p>
-              )}
-            </div>
-            <span className="text-lg text-muted-foreground" aria-hidden>
-              ›
-            </span>
-          </Link>
-        ))}
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display text-base font-bold leading-snug">
+                  {v.title}
+                </h3>
+                {v.subtitle && (
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                    {v.subtitle}
+                  </p>
+                )}
+                {(v.estimatedDurationMinutes || v.targetAudience) && (
+                  <p className="mt-1 flex items-center text-sm text-muted-foreground">
+                    <span className="mr-1.5 font-semibold text-primary">~</span>
+                    {[
+                      v.estimatedDurationMinutes ? `${v.estimatedDurationMinutes} min` : null,
+                      v.targetAudience,
+                    ]
+                      .filter(Boolean)
+                      .map((text, i) => (
+                        <span key={text} className="flex items-center">
+                          {i > 0 && (
+                            <span className="mx-2 inline-block h-3 w-px bg-border" aria-hidden />
+                          )}
+                          {text}
+                        </span>
+                      ))}
+                  </p>
+                )}
+              </div>
+              <span className="text-lg text-muted-foreground" aria-hidden>
+                ›
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

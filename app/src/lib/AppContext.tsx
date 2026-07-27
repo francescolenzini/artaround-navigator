@@ -131,7 +131,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             throw new Error(text || museumResponse.statusText || "Errore risoluzione museo");
           }
 
-          const payload = (await museumResponse.json()) as ListResponse<{ id: string }>;
+          const payload = (await museumResponse.json()) as ListResponse<{
+            id: string;
+            coverImage?: string;
+          }>;
           const resolvedMuseum = payload.data?.[0];
 
           if (!resolvedMuseum) {
@@ -141,6 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setMuseum({
             ...museum,
             museumId: resolvedMuseum.id,
+            coverImage: resolvedMuseum.coverImage || museum.coverImage,
           });
           setMuseumReady(true);
         }
