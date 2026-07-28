@@ -38,7 +38,7 @@ export function MapView({
   // Si apre sul piano della tappa di provenienza, non sul primo della lista:
   // chi arriva dal player si aspetta di vedersi già sulla mappa giusta.
   const startFloor =
-    (currentStepIndex != null ? visit?.steps[currentStepIndex]?.mapCoords?.floor : undefined) ??
+    (currentStepIndex != null ? visit?.steps[currentStepIndex]?.mapLocation?.floor : undefined) ??
     floors[0].floor;
   const [floor, setFloor] = useState<number>(startFloor);
 
@@ -190,7 +190,7 @@ export function MapView({
                 {selected.title ?? `Tappa ${activePin + 1}`}
               </div>
               <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-                Tappa {activePin + 1} di {total}
+                {selected.mapLocation?.label ? `${selected.mapLocation.label} · ` : ''}Tappa {activePin + 1} di {total}
               </div>
             </div>
             {onGoToStep && (
@@ -262,10 +262,10 @@ function layoutPins(steps: VisitStep[], floor: number, singleFloor: boolean) {
   const groups = new Map<string, { x: number; y: number; items: { s: VisitStep; i: number }[] }>();
 
   steps.forEach((s, i) => {
-    if (!s.mapCoords) return;
-    if (!singleFloor && s.mapCoords.floor !== floor) return;
-    const key = `${s.mapCoords.x}-${s.mapCoords.y}`;
-    const group = groups.get(key) ?? { x: s.mapCoords.x, y: s.mapCoords.y, items: [] };
+    if (!s.mapLocation) return;
+    if (!singleFloor && s.mapLocation.floor !== floor) return;
+    const key = `${s.mapLocation.x}-${s.mapLocation.y}`;
+    const group = groups.get(key) ?? { x: s.mapLocation.x, y: s.mapLocation.y, items: [] };
     group.items.push({ s, i });
     groups.set(key, group);
   });

@@ -68,12 +68,14 @@ export interface VisitStep {
    * Una tappa = un'opera, con tutte le sue varianti disponibili in visita.
    * Registro e durata di ciascuna si leggono da `ArtworkItem.classification`:
    * la griglia dei due assi la costruisce `lib/itemVariants.ts`, non lo step.
-   */
+  */
+  artworkId?: string;
   itemIds?: string[];
   /** Registro proposto per primo nel player, prima della preferenza del visitatore. */
   defaultRegister?: LanguageRegister;
   description?: string;
-  mapCoords?: { x: number; y: number; floor?: number };
+  /** Proiezione in lettura della collocazione dell'opera, non persistita nello step. */
+  mapLocation?: { label: string; floor: number; x: number; y: number };
   order?: number;
 }
 
