@@ -156,10 +156,6 @@ function PlayerPage() {
   useEffect(() => {
     sessionStorage.setItem(COMMANDS_OPEN_KEY, sheetOpen ? "1" : "0");
   }, [sheetOpen]);
-  // Ref della shell tenuta in stato e non in `useRef`: `sheetOpen` può essere
-  // già `true` al primo render (viene da sessionStorage) e il portale del velo
-  // deve trovare il nodo, che con una `useRef` sarebbe ancora null.
-  const [shellEl, setShellEl] = useState<HTMLDivElement | null>(null);
   // Stato della riproduzione TTS: "paused" mantiene la posizione di lettura,
   // distinto da "idle" che è il risultato di Stop (azzera e riparte da capo).
   const [playState, setPlayState] = useState<"idle" | "speaking" | "paused">("idle");
@@ -616,13 +612,7 @@ function PlayerPage() {
   return (
     // Altezza fissa e scorrimento confinato al contenuto: il microfono e i
     // comandi restano sempre visibili, senza doverli cercare scorrendo.
-    // `relative` + la ref: la shell è il contenitore in cui la tendina monta il
-    // proprio velo, così l'oscuramento resta dentro la colonna del telefono
-    // invece di debordare sul fondo pagina su schermi larghi.
-    <div
-      ref={setShellEl}
-      className="relative mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden bg-card text-foreground"
-    >
+    <div className="mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden bg-card text-foreground">
       {/* Indietro a sinistra, mappa + account a destra: le uscite dalla tappa. */}
       <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-4 pb-3">
         <BackLink
@@ -643,7 +633,12 @@ function PlayerPage() {
         />
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col px-5 pb-4">
+      {/* Nessun padding in fondo: il testo scorrevole arriva fino al filo del
+          footer, che è il modo in cui un'area scorrevole dice «continua». Uno
+          stacco lì sotto non si leggeva come respiro ma come una barretta di
+          margine incastrata fra contenuto e comandi. L'interlinea lascia
+          comunque il suo spazio sotto l'ultima riga visibile. */}
+      <main className="flex min-h-0 flex-1 flex-col px-5">
         <div className="flex items-baseline justify-between gap-3">
           <div className="font-display text-[19px] font-semibold leading-tight">
             Tappa {String(idx + 1).padStart(2, "0")}{" "}
@@ -737,63 +732,23 @@ function PlayerPage() {
         </div>
       </main>
 
-      {/* relative z-40: la riga di navigazione e la maniglia restano sopra il
-          velo della tendina, che altrimenti coprirebbe l'intera shell. La
-          maniglia sta subito sopra la riga di navigazione — nella zona del
-          pollice — così il pannello emerge da dietro di lei verso l'alto, senza
-          mai sovrapporsi a Precedente/Microfono/Prossimo.
+      {/* La maniglia sta subito sopra la riga di navigazione — nella zona del
+          pollice — e il pannello si apre sotto di lei, verso il basso: cresce
+          in flusso, quindi restringe il contenuto della tappa invece di
+          coprirlo, e Precedente/Microfono/Prossimo restano dove sono.
 
           Nessun padding orizzontale qui: lo mettono i figli, così il pannello
-          della tendina arriva a filo dei bordi della shell. Il filo superiore
-          diventa trasparente a tendina aperta — resterebbe in mezzo fra
-          pannello e maniglia, spezzando in due quella che deve leggersi come
-          una sola superficie continua — e cambia colore, non presenza, per non
-          spostare tutto di 1px. */}
-      <footer
-        className={`relative z-40 flex shrink-0 flex-col border-t bg-card pb-5 ${
-          sheetOpen ? "border-transparent" : "border-border"
-        }`}
-      >
-        <CommandSheet
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          label="Comandi e info del museo"
-          scrimContainer={shellEl}
-        >
-          {/* Un gruppo per asse: i due comandi di ogni riga sono l'uno il
-              contrario dell'altro, e righe diverse toccano cose diverse. È la
-              stessa distinzione che la riga di stato mostra sopra il testo. */}
-          {COMMAND_GROUPS.map((group, groupIndex) => (
-            <div key={group.label} className={groupIndex ? "mt-3.5" : undefined}>
-              <SectionLabel>{group.label}</SectionLabel>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {group.commands.map((c) => {
-                  const { unavailable, run } = commandState(c);
-                  return (
-                    <button
-                      key={c.label}
-                      onClick={run}
-                      aria-disabled={unavailable || undefined}
-                      // Disponibile e non disponibile si distinguono per la
-                      // superficie — pieno in pietra contro solo contorno — e non
-                      // sbiadendo l'etichetta: il testo resta pienamente leggibile
-                      // perché insegnare il vocabolario vocale è metà del senso
-                      // della tendina, anche quando il comando ora non si applica.
-                      className={`min-h-[44px] whitespace-nowrap rounded-full border border-line px-4 text-[12.5px] transition-colors active:scale-95 ${
-                        unavailable
-                          ? "bg-card font-medium text-muted-foreground"
-                          : "bg-secondary font-semibold text-foreground"
-                      }`}
-                    >
-                      {c.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          della tendina arriva a filo dei bordi della shell.
 
-          <div className="my-4 h-px bg-border" />
+          `relative` senza z-index: su viewport molto bassi `main` trabocca dal
+          proprio riquadro, e senza un contesto di impilamento il suo contenuto
+          si disegnerebbe sopra il footer (il tasto Stop finiva a cavallo del
+          pannello). Basta renderlo posizionato perché dipinga sopra. */}
+      <footer className="relative flex shrink-0 flex-col border-t border-border bg-card pb-5">
+        <CommandSheet open={sheetOpen} onOpenChange={setSheetOpen} label="Comandi e info del museo">
+          <CommandPager state={commandState} />
+
+          <div className="my-3 h-px bg-line" />
 
           <LogisticsPanel onSelect={showLogistics} />
         </CommandSheet>
@@ -802,7 +757,7 @@ function PlayerPage() {
             ed è l'unico elemento pieno d'accento della schermata. La didascalia
             sta su una riga a parte: dentro la colonna del microfono ne detterebbe
             la larghezza, comprimendo i due bottoni quando il testo cambia. */}
-        <div className="relative z-40 mt-3 flex shrink-0 items-center gap-3 px-5">
+        <div className="mt-3 flex shrink-0 items-center gap-3 px-5">
           <button
             disabled={isFirst || listening}
             onClick={() => goTo(idx - 1)}
@@ -860,7 +815,7 @@ function PlayerPage() {
         {/* Didascalia del microfono: fuori dalla fila, così può essere lunga
             quanto serve senza spostare i bottoni. */}
         <p
-          className={`relative z-40 mt-2 shrink-0 px-5 text-center text-[9.5px] font-semibold uppercase tracking-[0.14em] ${
+          className={`mt-2 shrink-0 px-5 text-center text-[9.5px] font-semibold uppercase tracking-[0.14em] ${
             listening ? "text-primary" : "text-foreground-subtle"
           }`}
         >
@@ -888,21 +843,167 @@ function SectionLabel({ children, className }: { children: string; className?: s
   );
 }
 
-// Pannello "Info del museo": sempre tappabile, stesso aspetto indipendentemente
-// dal microfono — solo il pulsante del microfono cambia con `listening`.
+/**
+ * I sei comandi, due alla volta. Le pagine non sono un taglio arbitrario a due
+ * a due: coincidono con i gruppi di `COMMAND_GROUPS`, cioè con gli assi, e ogni
+ * pagina mostra un comando e il suo contrario.
+ *
+ * L'asse non è scritto a schermo: «Dimmi di più» e «Non capisco» dicono già da
+ * soli cosa fanno, e una didascalia sopra due bottoni auto-esplicativi è una
+ * riga sprecata in un pannello che deve restare basso. Resta però
+ * nell'`aria-label` del gruppo, dove serve davvero: chi naviga a voce o con lo
+ * screen reader non ha i due bottoni davanti agli occhi tutti insieme.
+ *
+ * Si cambia pagina a scatti (frecce, swipe), mai a scorrimento libero: con tre
+ * pagine sole, un contenuto fermo su una posizione netta si legge meglio di uno
+ * lasciato a metà. Le frecce girano in tondo invece di disabilitarsi agli
+ * estremi: su un vocabolario chiuso e corto, un controllo morto costa più di
+ * quanto insegni.
+ */
+function CommandPager({
+  state,
+}: {
+  state: (c: VoiceCommand) => { unavailable: boolean; run: () => void };
+}) {
+  const [page, setPage] = useState(0);
+  const pages = COMMAND_GROUPS.length;
+  const go = (dir: 1 | -1) => setPage((p) => (p + dir + pages) % pages);
+
+  // Stessa soglia di 40px della maniglia della tendina, sull'asse orizzontale.
+  // Niente `setPointerCapture` qui: catturare il puntatore sul contenitore
+  // ruberebbe il click ai bottoni che contiene. Lo swipe che parte da un chip
+  // viene invece fermato in fase di cattura, altrimenti trascinare lancerebbe
+  // anche il comando da cui si è partiti.
+  const dragStartX = useRef<number | null>(null);
+  const dragged = useRef(false);
+
+  return (
+    <section>
+      <div
+        className="overflow-hidden"
+        onPointerDown={(e) => {
+          dragStartX.current = e.clientX;
+        }}
+        onPointerUp={(e) => {
+          const startX = dragStartX.current;
+          dragStartX.current = null;
+          if (startX == null) return;
+          const delta = e.clientX - startX;
+          if (Math.abs(delta) < 40) return;
+          dragged.current = true;
+          go(delta > 0 ? -1 : 1);
+        }}
+        onClickCapture={(e) => {
+          if (!dragged.current) return;
+          dragged.current = false;
+          e.stopPropagation();
+        }}
+      >
+        <div
+          className="flex transition-transform duration-300 ease-out motion-reduce:transition-none"
+          style={{ transform: `translateX(-${page * 100}%)` }}
+        >
+          {COMMAND_GROUPS.map((group, i) => (
+            <div
+              key={group.label}
+              role="group"
+              aria-label={group.label}
+              // Le pagine fuori campo restano nel DOM per l'animazione, ma
+              // fuori dal giro del Tab: raggiungere col tasto un bottone che
+              // non si vede è peggio che non raggiungerlo.
+              inert={i !== page}
+              className="grid w-full shrink-0 grid-cols-2 gap-2"
+            >
+              {group.commands.map((c) => {
+                const { unavailable, run } = state(c);
+                return (
+                  <button
+                    key={c.label}
+                    onClick={run}
+                    aria-disabled={unavailable || undefined}
+                    // Disponibile e non disponibile si distinguono per la
+                    // superficie — pieno contro solo contorno — e non sbiadendo
+                    // l'etichetta: il testo resta pienamente leggibile perché
+                    // insegnare il vocabolario vocale è metà del senso della
+                    // tendina, anche quando il comando ora non si applica.
+                    className={`min-h-[44px] min-w-0 truncate rounded-full border border-line px-3 text-[12.5px] transition-colors active:scale-95 ${
+                      unavailable
+                        ? "bg-transparent font-medium text-muted-foreground"
+                        : "bg-card font-semibold text-foreground"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Frecce e puntini in un gruppo solo: fanno lo stesso mestiere — dire
+          dove sei e spostarti — e vicini si spiegano a vicenda. Stanno qui e
+          non ai lati dei chip perché lì si mangiavano 80px di larghezza e sotto
+          i 360px facevano troncare «Troppo semplice», cioè proprio l'etichetta
+          che sta insegnando il comando vocale.
+
+          I puntini restano indicatori, non controlli: a questa dimensione
+          sarebbero un bersaglio impossibile, e le frecce accanto fanno già da
+          comando. Spenti in "tenue" e non in "pietra": sul fondo sussurro del
+          pannello, la pietra ha tre centesimi di luminosità di scarto e sparisce. */}
+      <div className="mt-2.5 flex items-center justify-center gap-3">
+        <PagerArrow dir={-1} onClick={() => go(-1)} />
+        <span className="flex items-center gap-1.5" aria-hidden>
+          {COMMAND_GROUPS.map((group, i) => (
+            <span
+              key={group.label}
+              className={`h-2 rounded-full transition-all ${
+                i === page ? "w-5 bg-primary" : "w-2 bg-foreground-subtle"
+              }`}
+            />
+          ))}
+        </span>
+        <PagerArrow dir={1} onClick={() => go(1)} />
+      </div>
+    </section>
+  );
+}
+
+function PagerArrow({ dir, onClick }: { dir: 1 | -1; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={dir === 1 ? "Altri comandi" : "Comandi precedenti"}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-card text-[17px] leading-none text-foreground-subtle active:scale-95"
+    >
+      {dir === 1 ? "›" : "‹"}
+    </button>
+  );
+}
+
+/**
+ * Pannello "Info del museo": cinque servizi su una riga sola, senza andare a
+ * capo. Ci stanno perché icona ed etichetta sono impilate invece che affiancate
+ * — «Toilette» con l'icona di fianco supererebbe i 78px, sopra ne basta ~50 —
+ * e questo permette di tenere entrambe: il pittogramma affianca il testo, non lo
+ * sostituisce. `truncate` è solo una rete di sicurezza per gli schermi più
+ * stretti; l'etichetta intera resta comunque nell'`aria-label`.
+ */
 function LogisticsPanel({ onSelect }: { onSelect: (key: LogisticsKey) => void }) {
   return (
     <section>
       <SectionLabel>Info del museo</SectionLabel>
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
+      <div className="mt-2 grid grid-cols-5 gap-1">
         {LOGISTICS.map(({ key, label, Icon }) => (
           <button
             key={key}
             onClick={() => onSelect(key)}
-            className="flex items-center gap-1.5 rounded-full border border-line bg-surface-muted px-3 py-1.5 text-[12px] text-muted-foreground active:scale-95"
+            aria-label={label}
+            className="flex min-h-[46px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl border border-line bg-card px-1 py-2 text-muted-foreground active:scale-95"
           >
-            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {label}
+            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="max-w-full truncate text-[10px] leading-none">{label}</span>
           </button>
         ))}
       </div>

@@ -65,10 +65,9 @@
   --color-line: var(--line);
   --color-foreground-subtle: var(--foreground-subtle);
   --color-scrim: var(--scrim);
-  /* Famiglia delle ombre degli overlay: la stessa forma verso l'alto (tendina
-     dei comandi) o verso il basso (popover/modali), così i due si leggono come
-     lo stesso materiale a due orientamenti. */
-  --shadow-sheet: 0 -18px 40px -20px var(--shadow-tint);
+  /* Ombra degli overlay che si staccano dalla pagina (popover, modali). La
+     tendina dei comandi non ne ha una: cresce in flusso dentro il footer, non
+     si sovrappone a niente, e un'ombra le darebbe una profondità che non ha. */
   --shadow-popover: 0 22px 48px -18px var(--shadow-tint-strong);
 }
 
