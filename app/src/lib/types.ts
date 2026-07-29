@@ -132,6 +132,10 @@ export interface ArtworkItem {
     title?: string;
     screenText?: string;
     ttsText?: string;
+    rendering?: {
+      supportsScreen?: boolean;
+      supportsTTS?: boolean;
+    };
   };
 }
 

@@ -33,8 +33,10 @@ import { ErrorScreen, LoadingScreen, Toast } from "../components/Shell";
 import { RichText } from "../components/RichText";
 import { BackLink, HeaderActions } from "../components/Nav";
 import { CommandSheet } from "../components/CommandSheet";
+import { VisitCompletionDialog } from "../components/VisitCompletionDialog";
 import { formatLogisticsToast } from "../lib/logisticsToast";
-import { richTextToPlain } from "../lib/richtext";
+import { effectiveTtsText, supportsTts } from "../lib/contentText";
+import { clearSessionContent } from "../lib/sessionContent";
 import {
   pauseSpeak,
   resumeSpeak,
@@ -142,6 +144,7 @@ function PlayerPage() {
   );
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [completionOpen, setCompletionOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const recRef = useRef<RecognitionHandle | null>(null);
   const [sheetOpen, setSheetOpen] = useState(
@@ -180,6 +183,12 @@ function PlayerPage() {
     stopSpeak();
     setPlayState("idle");
   }, []);
+
+  const completeVisit = useCallback(() => {
+    stopTts();
+    clearSessionContent(setVisit, setCurrentItem);
+    navigate({ to: "/visits", replace: true });
+  }, [navigate, setCurrentItem, setVisit, stopTts]);
 
   // Load visit if missing
   useEffect(() => {
@@ -301,9 +310,16 @@ function PlayerPage() {
   // Unica azione condivisa da "Ascolta" e dal comando vocale "Cos'è
   // questo?": riproduce l'item corrente senza cambiare lunghezza o linguaggio.
   const playCurrentContent = useCallback(() => {
-    const screenContent = currentItem?.content?.screenText ?? step?.description ?? "";
-    const tts = currentItem?.content?.ttsText ?? richTextToPlain(screenContent);
-    if (tts) playTts(tts);
+    const tts = effectiveTtsText(currentItem, step?.description);
+    if (tts) {
+      playTts(tts);
+    } else {
+      setToast(
+        supportsTts(currentItem)
+          ? "Questa tappa non ha un testo da ascoltare"
+          : "La sintesi vocale non è disponibile per questo contenuto",
+      );
+    }
   }, [currentItem, step, playTts]);
 
   // Sposta la selezione di un gradino, aggiornando insieme schermo
@@ -338,7 +354,17 @@ function PlayerPage() {
       // riavvia da solo solo se il comando è arrivato a voce — da bottone
       // aggiorna solo lo schermo, l'ascolto resta una scelta esplicita.
       stopTts();
-      if (opts?.speak && target.item.content?.ttsText) playTts(target.item.content.ttsText);
+      if (opts?.speak) {
+        const targetTts = effectiveTtsText(target.item);
+        if (targetTts) playTts(targetTts);
+        else {
+          setToast(
+            supportsTts(target.item)
+              ? "Questa variante non ha un testo da ascoltare"
+              : "La sintesi vocale non è disponibile per questa variante",
+          );
+        }
+      }
     },
     [variantInDirection, variant, stopTts, playTts],
   );
@@ -568,6 +594,10 @@ function PlayerPage() {
     if (currentItemId) return currentItem?.content?.screenText ?? "";
     return step.description ?? "";
   }, [step, currentItemId, currentItem]);
+  const narrationAvailable = useMemo(
+    () => Boolean(effectiveTtsText(currentItem, step?.description)),
+    [currentItem, step],
+  );
 
   // Un comando è non disponibile quando non può fare ciò che promette: la
   // variante se la tappa non ne ha una nella direzione richiesta su quell'asse,
@@ -715,6 +745,8 @@ function PlayerPage() {
         <div className="mt-3.5 grid h-12 w-full grid-cols-[minmax(0,1fr)_104px] gap-2">
           <button
             disabled={listening}
+            aria-disabled={!narrationAvailable}
+            title={!narrationAvailable ? "Audio non disponibile per questo contenuto" : undefined}
             onClick={() => {
               if (playState === "speaking") return pauseTts();
               if (playState === "paused") return resumeTts();
@@ -725,7 +757,9 @@ function PlayerPage() {
                 ? "Metti in pausa il racconto"
                 : playState === "paused"
                   ? "Riprendi il racconto"
-                  : "Ascolta il racconto"
+                  : narrationAvailable
+                    ? "Ascolta il racconto"
+                    : "Audio non disponibile per questo contenuto"
             }
             className="flex h-12 min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-primary/85 disabled:cursor-not-allowed disabled:bg-secondary disabled:text-foreground-subtle"
           >
@@ -740,7 +774,13 @@ function PlayerPage() {
               )}
             </span>
             <span>
-              {playState === "speaking" ? "Pausa" : playState === "paused" ? "Riprendi" : "Ascolta"}
+              {playState === "speaking"
+                ? "Pausa"
+                : playState === "paused"
+                  ? "Riprendi"
+                  : narrationAvailable
+                    ? "Ascolta"
+                    : "Audio non disponibile"}
             </span>
           </button>
           <button
@@ -837,15 +877,16 @@ function PlayerPage() {
             disabled={listening}
             onClick={() => {
               if (isLast) {
-                stopTts();
-                navigate({ to: "/visit-complete/$visitId", params: { visitId } });
+                setCompletionOpen(true);
                 return;
               }
               goTo(idx + 1);
             }}
-            className="min-h-[48px] min-w-0 flex-1 truncate rounded-xl bg-foreground px-2 text-[13px] font-semibold text-background disabled:bg-secondary disabled:text-foreground-subtle"
+            className={`min-h-[48px] min-w-0 flex-1 truncate rounded-xl bg-foreground px-2 font-semibold text-background disabled:bg-secondary disabled:text-foreground-subtle ${
+              isLast ? "text-[12px]" : "text-[13px]"
+            }`}
           >
-            {isLast ? "Torna alle visite" : "Prossimo ›"}
+            {isLast ? "Concludi visita" : "Prossimo ›"}
           </button>
         </div>
 
@@ -863,6 +904,12 @@ function PlayerPage() {
             contesto dell'azione e non copre indietro, mappa o account. */}
         {toast && <Toast message={toast} className="absolute bottom-full left-5 right-5 mb-3" />}
       </footer>
+
+      <VisitCompletionDialog
+        open={completionOpen}
+        onConfirm={completeVisit}
+        onStay={() => setCompletionOpen(false)}
+      />
     </div>
   );
 }

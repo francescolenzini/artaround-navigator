@@ -11,6 +11,7 @@ import type {
   Visit,
 } from "./types";
 import { getErrorMessage, readError } from "./api";
+import { clearSessionContent } from "./sessionContent";
 
 interface AppState {
   apiConfig: ApiConfig | null;
@@ -180,6 +181,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
+    clearSessionContent(setVisit, setCurrentItem);
     setMuseum(null);
     setMuseumReady(false);
     // L'errore globale altrimenti continuerebbe a coprire la route di login:
@@ -305,6 +307,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         token,
         user,
         setAuth: (t, u) => {
+          // Un nuovo principal non deve mai ereditare contenuti caricati dalla
+          // sessione precedente, neppure durante un cambio account senza reload.
+          clearSessionContent(setVisit, setCurrentItem);
           localStorage.setItem(TOKEN_KEY, t);
           localStorage.setItem(USER_KEY, JSON.stringify(u));
           setToken(t);
