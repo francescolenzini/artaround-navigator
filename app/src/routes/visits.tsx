@@ -48,25 +48,21 @@ function VisitsPage() {
         <h1 className="font-display text-[29px] font-semibold tracking-[-0.02em]">
           Scegli la tua visita
         </h1>
-        {/* Intro breve e accogliente: chiarisce subito il valore della guida,
-            senza rubare attenzione alle card delle visite. */}
-        <p className="mt-3.5 text-base leading-[1.55] text-muted-foreground">
-          {firstNameOf(user?.fullName) ? (
-            <>
-              <b className="font-semibold text-foreground">
-                Benvenuto, {firstNameOf(user?.fullName)}.
-              </b>
-              <br />
-            </>
-          ) : (
-            <>
-              <b className="font-semibold text-foreground">Benvenuto.</b>
-              <br />
-            </>
-          )}
-          ArtAround ti accompagna tappa dopo tappa, tra storie, curiosità e indicazioni. Quando
-          vuoi, chiedi a voce di approfondire o di indicarti la strada.
-        </p>
+        {/* Intro breve e accogliente: presenta le visite come percorsi curati
+            e chiarisce subito il valore della guida. */}
+        <div className="mt-3.5 space-y-2 text-base leading-[1.55] text-muted-foreground">
+          <p className="font-semibold text-foreground">
+            {firstNameOf(user?.fullName)
+              ? `Benvenuto, ${firstNameOf(user?.fullName)}.`
+              : "Benvenuto."}
+          </p>
+          <p>
+            ArtAround ti accompagna tappa dopo tappa, tra storie, curiosità e indicazioni. Scegli
+            una delle nostre visite curate: troverai percorsi dedicati a opere e temi diversi,
+            adatti al tempo che hai a disposizione. Durante la visita avrai a disposizione una serie
+            di comandi vocali per poter personalizzare la tua esperienza.
+          </p>
+        </div>
       </header>
 
       <div className="mt-5 flex flex-col gap-3 px-5">
@@ -105,22 +101,9 @@ function VisitsPage() {
                 {v.subtitle && (
                   <p className="mt-0.5 truncate text-sm text-muted-foreground">{v.subtitle}</p>
                 )}
-                {(v.estimatedDurationMinutes || v.targetAudience) && (
-                  <p className="mt-1 flex items-center text-sm text-muted-foreground">
-                    <span className="mr-1.5 font-semibold text-primary">~</span>
-                    {[
-                      v.estimatedDurationMinutes ? `${v.estimatedDurationMinutes} min` : null,
-                      v.targetAudience,
-                    ]
-                      .filter(Boolean)
-                      .map((text, i) => (
-                        <span key={text} className="flex items-center">
-                          {i > 0 && (
-                            <span className="mx-2 inline-block h-3 w-px bg-border" aria-hidden />
-                          )}
-                          {text}
-                        </span>
-                      ))}
+                {v.estimatedDurationMinutes && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Circa {v.estimatedDurationMinutes} min
                   </p>
                 )}
               </div>

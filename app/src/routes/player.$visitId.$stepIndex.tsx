@@ -298,6 +298,14 @@ function PlayerPage() {
     [grid, variant],
   );
 
+  // Unica azione condivisa da "Ascolta" e dal comando vocale "Cos'è
+  // questo?": riproduce l'item corrente senza cambiare lunghezza o linguaggio.
+  const playCurrentContent = useCallback(() => {
+    const screenContent = currentItem?.content?.screenText ?? step?.description ?? "";
+    const tts = currentItem?.content?.ttsText ?? richTextToPlain(screenContent);
+    if (tts) playTts(tts);
+  }, [currentItem, step, playTts]);
+
   // Sposta la selezione di un gradino, aggiornando insieme schermo
   // (`screenText`) e sintesi vocale (`ttsText`), come richiede la spec.
   //
@@ -438,8 +446,7 @@ function PlayerPage() {
         return true;
       }
       if (has("cos'è questo", "cos è questo", "descrivi")) {
-        const tts = currentItem?.content?.ttsText;
-        if (tts) playTts(tts);
+        playCurrentContent();
         return true;
       }
       // I due assi, in quest'ordine per una ragione precisa: il matching è per
@@ -496,8 +503,7 @@ function PlayerPage() {
     [
       idx,
       goTo,
-      currentItem,
-      playTts,
+      playCurrentContent,
       resumeTts,
       stopTts,
       goToVariant,
@@ -592,9 +598,14 @@ function PlayerPage() {
           },
         };
       }
-      return { unavailable: !currentItemId, run: c.kind === "author" ? showAuthor : showStyle };
+      const unavailable =
+        c.kind === "author" ? !artwork?.artist : !artwork?.style && !artwork?.category;
+      return {
+        unavailable,
+        run: unavailable ? () => {} : c.kind === "author" ? showAuthor : showStyle,
+      };
     },
-    [variantInDirection, goToVariant, showAuthor, showStyle, currentItemId],
+    [variantInDirection, goToVariant, artwork, showAuthor, showStyle],
   );
 
   if (!token) return <Navigate to="/login" />;
@@ -604,7 +615,11 @@ function PlayerPage() {
   const total = visit.steps.length;
   const isFirst = idx === 0;
   const isLast = idx >= total - 1;
-  const artworkTitle = currentItem?.content?.title ?? step.title;
+  // L'identità dell'oggetto resta stabile mentre i comandi cambiano item.
+  // `content.title` è un'etichetta editoriale e non appartiene al Navigator.
+  const objectTitle = currentItemId
+    ? (artwork?.title ?? step.title ?? "Oggetto della visita")
+    : (step.title ?? "Passaggio della visita");
   const artworkMeta = [artwork?.artist, artwork?.year].filter(Boolean).join(" · ");
   const stepTypeLabel =
     step.type === "logistics_intro"
@@ -657,11 +672,11 @@ function PlayerPage() {
           </div>
         </div>
 
-        {/* Questo slot resta sempre presente: per opere mostra immagine e metadati,
-            per logistica/spostamenti mostra il tipo di step. La sua altezza fissa
-            impedisce a controlli e testo di saltare quando cambia il contenuto. */}
+        {/* Lo slot identifica l'oggetto, non l'item editoriale selezionato. Ha
+            altezza adattiva: due righe di titolo non possono più nascondere i
+            metadati, e i comandi non ne cambiano mai il contenuto. */}
         <div
-          className={`mt-3.5 flex h-[64px] items-center gap-3.5 transition-opacity ${
+          className={`mt-3.5 flex min-h-[64px] items-start gap-3.5 transition-opacity ${
             listening ? "opacity-45" : ""
           }`}
         >
@@ -669,8 +684,8 @@ function PlayerPage() {
             (thumbSrc ? (
               <img
                 src={thumbSrc}
-                alt={artworkTitle}
-                className="h-[58px] w-[58px] shrink-0 rounded-lg border border-border object-cover"
+                alt={objectTitle}
+                className="mt-0.5 h-[58px] w-[58px] shrink-0 rounded-lg border border-border object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
@@ -678,14 +693,14 @@ function PlayerPage() {
             ) : (
               <div className="h-[58px] w-[58px] shrink-0 rounded-lg bg-secondary" aria-hidden />
             ))}
-          <div className="max-h-[58px] min-w-0 overflow-hidden">
+          <div className="min-w-0 flex-1">
             {!currentItemId && (
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground-subtle">
                 {stepTypeLabel}
               </p>
             )}
             <h1 className="max-h-[48px] overflow-hidden font-display text-[21px] font-semibold leading-tight tracking-[-0.01em] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-              {artworkTitle}
+              {objectTitle}
             </h1>
             {artworkMeta && (
               <p className="mt-1 truncate text-xs text-muted-foreground">{artworkMeta}</p>
@@ -703,10 +718,7 @@ function PlayerPage() {
             onClick={() => {
               if (playState === "speaking") return pauseTts();
               if (playState === "paused") return resumeTts();
-              // Il testo a schermo può contenere markup: al TTS va la versione in
-              // testo semplice, mai i tag.
-              const t = currentItem?.content?.ttsText ?? richTextToPlain(content);
-              if (t) playTts(t);
+              playCurrentContent();
             }}
             aria-label={
               playState === "speaking"
@@ -747,7 +759,12 @@ function PlayerPage() {
           </button>
         </div>
 
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-3 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
+        <div
+          role="region"
+          aria-label="Testo del racconto"
+          tabIndex={0}
+          className="mt-5 min-h-0 flex-1 overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring sm:pr-3 sm:[scrollbar-width:thin] sm:[&::-webkit-scrollbar]:w-2 sm:[&::-webkit-scrollbar-track]:bg-transparent sm:[&::-webkit-scrollbar-thumb]:rounded-full sm:[&::-webkit-scrollbar-thumb]:bg-border"
+        >
           <RichText value={content} fallback="—" className="text-[1rem] leading-[1.7]" />
         </div>
       </main>
@@ -861,9 +878,8 @@ function SectionLabel({ children, className }: { children: string; className?: s
 }
 
 /**
- * I sei comandi, due alla volta. Le pagine non sono un taglio arbitrario a due
- * a due: coincidono con i gruppi di `COMMAND_GROUPS`, cioè con gli assi, e ogni
- * pagina mostra un comando e il suo contrario.
+ * I sei comandi, due alla volta. Le pagine coincidono con i gruppi di
+ * `COMMAND_GROUPS`: ogni pagina mostra un comando e il suo contrario.
  *
  * L'asse non è scritto a schermo: «Dimmi di più» e «Non capisco» dicono già da
  * soli cosa fanno, e una didascalia sopra due bottoni auto-esplicativi è una
@@ -937,15 +953,13 @@ function CommandPager({
                   <button
                     key={c.label}
                     onClick={run}
-                    aria-disabled={unavailable || undefined}
-                    // Disponibile e non disponibile si distinguono per la
-                    // superficie — pieno contro solo contorno — e non sbiadendo
-                    // l'etichetta: il testo resta pienamente leggibile perché
-                    // insegnare il vocabolario vocale è metà del senso della
-                    // tendina, anche quando il comando ora non si applica.
+                    disabled={unavailable}
+                    // Lo stato impossibile è visibile e semanticamente davvero
+                    // disabilitato. A voce lo stesso comando resta riconoscibile
+                    // e riceve il feedback esplicativo dal relativo handler.
                     className={`min-h-[44px] min-w-0 truncate rounded-full border border-line px-3 text-[12.5px] transition-colors active:scale-95 ${
                       unavailable
-                        ? "bg-transparent font-medium text-muted-foreground"
+                        ? "cursor-not-allowed bg-transparent font-medium text-muted-foreground"
                         : "bg-card font-medium text-foreground"
                     }`}
                   >

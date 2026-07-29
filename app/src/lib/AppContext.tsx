@@ -76,13 +76,12 @@ function normalizeApiConfig(value: unknown): ApiConfig {
   const apiKey = typeof config.apiKey === "string" ? config.apiKey.trim() : "";
   const rawBaseUrl = typeof config.baseUrl === "string" ? config.baseUrl.trim() : "";
 
-  if (!apiKey || !rawBaseUrl) {
-    throw new Error("api.config.json deve definire apiKey e baseUrl non vuoti.");
-  }
-
   let baseUrl: URL;
   try {
-    baseUrl = new URL(rawBaseUrl, window.location.origin);
+    // Nel deploy assemblato app e API condividono la stessa origine. In quel
+    // caso il server aggiunge la API key alla richiesta e la config espone
+    // intenzionalmente entrambi i campi vuoti: nessun segreto arriva al browser.
+    baseUrl = new URL(rawBaseUrl || "/", window.location.origin);
   } catch {
     throw new Error("api.config.json contiene un baseUrl non valido.");
   }
@@ -230,7 +229,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             `${apiConfig.baseUrl}/museums?slug=${encodeURIComponent(museumSlug)}&pageSize=1`,
             {
               headers: {
-                "x-api-key": apiConfig.apiKey,
+                ...(apiConfig.apiKey && { "x-api-key": apiConfig.apiKey }),
                 Authorization: `Bearer ${token}`,
               },
             },
@@ -257,7 +256,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         const response = await fetch(`${apiConfig.baseUrl}/visits?page=1&pageSize=1`, {
           headers: {
-            "x-api-key": apiConfig.apiKey,
+            ...(apiConfig.apiKey && { "x-api-key": apiConfig.apiKey }),
             Authorization: `Bearer ${token}`,
           },
         });

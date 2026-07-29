@@ -117,8 +117,9 @@ committato**: non è un database editoriale, ma contiene esclusivamente
 `museumSlug`, l'eventuale `marketplaceUrl` di deployment e `floors`, che associa
 i codici numerici di piano alle planimetrie statiche. Nome, copertina, logistica
 e lingue vengono risolti dal documento `Museum` tramite API dopo il login. Il
-valore locale di `marketplaceUrl` punta a `http://localhost:5174`; in produzione
-va sostituito con l'URL reale dell'Editor.
+valore locale di `marketplaceUrl` punta a `http://localhost:5174`. Nel deploy
+assemblato del repository principale viene sovrascritto a `/editor` a runtime;
+in un deploy standalone va invece impostato sull'URL reale dell'Editor.
 
 ### Bind-mount + volume per `node_modules`
 

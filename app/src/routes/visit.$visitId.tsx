@@ -101,10 +101,10 @@ function VisitDetail() {
                 key={i}
                 className="flex items-center gap-4 border-b border-border py-4 last:border-b-0"
               >
-                <span className="w-8 shrink-0 font-display text-lg font-bold leading-none tabular-nums">
+                <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-foreground font-display text-[13px] font-bold leading-none text-background tabular-nums">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <div className="flex-1 leading-none">
+                <div className="min-w-0 flex-1 leading-none">
                   <span className={badgeClassForType(s.type)}>{labelForType(s.type)}</span>
                   {s.title && <div className="mt-1 text-base font-semibold">{s.title}</div>}
                 </div>

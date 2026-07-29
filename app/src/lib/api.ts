@@ -126,10 +126,13 @@ export async function apiFetch<T>(
   init: RequestInit = {},
 ): Promise<T> {
   const headers: Record<string, string> = {
-    "x-api-key": cfg.apiKey,
     "Content-Type": "application/json",
     ...((init.headers as Record<string, string>) ?? {}),
   };
+  // Nel deployment integrato la chiave non viene inviata al browser: la
+  // aggiunge il server Express alla richiesta same-origin. Le esecuzioni
+  // standalone mantengono invece il comportamento esistente.
+  if (cfg.apiKey) headers["x-api-key"] = cfg.apiKey;
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let res: Response;

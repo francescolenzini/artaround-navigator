@@ -1,6 +1,6 @@
 {
   "museumSlug": "galleria-degli-uffizi",
-  "marketplaceUrl": "/editor",
+  "marketplaceUrl": "http://localhost:5174",
   "floors": [
     { "floor": 2, "label": "Primo piano", "image": "/maps/uffizi-p1.png" },
     { "floor": 1, "label": "Secondo piano", "image": "/maps/uffizi-p2.png" }
