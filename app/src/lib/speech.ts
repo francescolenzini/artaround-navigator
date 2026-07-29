@@ -159,18 +159,46 @@ export function resumeSpeak() {
 
 export type RecognitionHandle = { stop: () => void };
 
+type SpeechRecognitionResultLike = {
+  [index: number]: { transcript?: string } | undefined;
+};
+
+type SpeechRecognitionEventLike = {
+  results: {
+    [index: number]: SpeechRecognitionResultLike | undefined;
+  };
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
+
 export function startRecognition(
   onResult: (text: string) => void,
   onEnd?: () => void,
 ): RecognitionHandle | null {
-  const w = window as any;
+  const w = window as SpeechRecognitionWindow;
   const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
   if (!SR) return null;
   const rec = new SR();
   rec.lang = "it-IT";
   rec.continuous = false;
   rec.interimResults = false;
-  rec.onresult = (e: any) => {
+  rec.onresult = (e) => {
     const t = e.results[0]?.[0]?.transcript ?? "";
     onResult(String(t).toLowerCase().trim());
   };

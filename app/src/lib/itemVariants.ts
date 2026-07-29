@@ -177,6 +177,27 @@ export function resolveVariant(grid: VariantGrid, pref: VariantPref): Variant | 
 }
 
 /**
+ * Risolve la variante visibile nella tappa. Finché il visitatore non esprime
+ * una preferenza viene rispettato l'item iniziale scelto dall'autore; in
+ * seguito prevale la posizione di sessione sui due assi. defaultRegister è
+ * soltanto il ripiego per le visite storiche.
+ */
+export function resolveStepVariant(
+  grid: VariantGrid,
+  pref: VariantPref,
+  defaultItemId?: string,
+  defaultRegister: LanguageRegister | null = null,
+): Variant | null {
+  const hasVisitorPreference = pref.register != null || pref.minutes != null;
+  if (hasVisitorPreference) return resolveVariant(grid, pref);
+
+  const defaultVariant = grid.variants.find((variant) => variant.item.id === defaultItemId);
+  if (defaultVariant) return defaultVariant;
+
+  return resolveVariant(grid, { register: defaultRegister, minutes: null });
+}
+
+/**
  * Variante raggiunta muovendosi di un gradino su un asse, o `null` se l'asse è
  * saturo in quella direzione.
  *

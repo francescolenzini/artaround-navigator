@@ -5,9 +5,5 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
-  plugins: [
-    TanStackRouterVite({ routesDirectory: "./src/routes" }),
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [TanStackRouterVite({ routesDirectory: "./src/routes" }), react(), tailwindcss()],
 });

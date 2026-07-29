@@ -36,5 +36,15 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    files: ["src/lib/AppContext.tsx"],
+    rules: {
+      // L'hook deve restare accanto al provider e al contesto che consuma.
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true, allowExportNames: ["useApp"] },
+      ],
+    },
+  },
   eslintPluginPrettier,
 );

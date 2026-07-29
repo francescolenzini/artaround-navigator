@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Map as MapIcon } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 
 /**
@@ -32,20 +33,6 @@ export function BackLink({ label, onClick }: { label: string; onClick: () => voi
   );
 }
 
-function MapGlyph({ className }: { className?: string }) {
-  // Icona disegnata con i bordi (niente libreria): rettangolo con due pieghe,
-  // la stessa forma usata nei mockup.
-  return (
-    <span
-      aria-hidden
-      className={`flex h-[15px] w-[19px] shrink-0 overflow-hidden rounded-[3px] border-[1.8px] ${className ?? ""}`}
-    >
-      <span className="ml-[4.4px] w-[1.4px] bg-current" />
-      <span className="ml-[4.4px] w-[1.4px] bg-current" />
-    </span>
-  );
-}
-
 /**
  * Accesso alla mappa: pill compatta pensata per stare nell'header di ogni
  * schermata, accanto all'account (vedi `HeaderActions`).
@@ -56,7 +43,7 @@ export function MapPill({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="flex h-[38px] min-h-[38px] shrink-0 items-center gap-2 rounded-full bg-foreground px-3.5 text-background"
     >
-      <MapGlyph className="border-current" />
+      <MapIcon className="size-5 shrink-0" aria-hidden />
       <span className="text-xs font-semibold">Mappa</span>
     </button>
   );
@@ -81,7 +68,7 @@ function initialsOf(name: string) {
  * con nome, ruolo e le due uscite (Editor, logout). Stato locale, nessuna route.
  */
 export function AccountMenu() {
-  const { user, museum, logout } = useApp();
+  const { user, museumConfig, logout } = useApp();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -99,7 +86,8 @@ export function AccountMenu() {
   // offrirgli una porta chiusa. Allowlist e non `!== "visitor"`, così un ruolo
   // aggiunto in futuro non eredita l'accesso per distrazione.
   const canOpenEditor =
-    Boolean(museum?.marketplaceUrl) && (user?.role === "super_admin" || user?.role === "author");
+    Boolean(museumConfig?.marketplaceUrl) &&
+    (user?.role === "super_admin" || user?.role === "author");
 
   return (
     <div className="relative shrink-0">
@@ -143,7 +131,7 @@ export function AccountMenu() {
               <>
                 <div className="h-px bg-border" />
                 <a
-                  href={museum!.marketplaceUrl}
+                  href={museumConfig!.marketplaceUrl}
                   target="_blank"
                   rel="noreferrer"
                   role="menuitem"

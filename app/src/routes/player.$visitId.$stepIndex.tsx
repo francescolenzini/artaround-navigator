@@ -3,7 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Coffee,
   DoorOpen,
+  Pause,
+  Play,
   ShoppingBag,
+  Square,
   Toilet,
   TriangleAlert,
   type LucideIcon,
@@ -20,16 +23,17 @@ import {
 import {
   buildGrid,
   neighbour,
-  resolveVariant,
+  resolveStepVariant,
   type Variant,
   type VariantAxis,
   type VariantGrid,
   type VariantPref,
 } from "../lib/itemVariants";
-import { ErrorScreen, LoadingScreen, Modal, Toast } from "../components/Shell";
+import { ErrorScreen, LoadingScreen, Toast } from "../components/Shell";
 import { RichText } from "../components/RichText";
 import { BackLink, HeaderActions } from "../components/Nav";
 import { CommandSheet } from "../components/CommandSheet";
+import { formatLogisticsToast } from "../lib/logisticsToast";
 import { richTextToPlain } from "../lib/richtext";
 import {
   pauseSpeak,
@@ -48,15 +52,7 @@ type VoiceCommand =
   | { label: string; kind: "variant"; axis: VariantAxis; dir: 1 | -1 }
   | { label: string; kind: "author" | "style" };
 
-// Vocabolario dei comandi (specifiche docente): ogni voce è insieme un comando
-// vocale riconosciuto e un bottone toccabile — la parità fra i due è un requisito,
-// non un dettaglio, quindi la lista è una sola per entrambi.
-//
-// I comandi di variante sono raggruppati per asse, ed è l'unica ragione per cui
-// il gruppo esiste: "dimmi di più" e "troppo semplice" facevano la stessa cosa
-// finché la selezione dell'item guardava solo il registro. Ora il primo allunga
-// il racconto tenendo il linguaggio, il secondo cambia linguaggio tenendo la
-// durata, e i due gruppi lo dicono anche a chi guarda invece di parlare.
+// Un'unica lista mantiene allineati comandi vocali e controlli equivalenti.
 const COMMAND_GROUPS: { label: string; commands: VoiceCommand[] }[] = [
   {
     label: "Quanto racconto",
@@ -117,7 +113,6 @@ function readStoredPref(): VariantPref {
     return { register: null, minutes: null };
   }
 }
-
 // Fonte immagine dell'opera: primo asset di tipo 'image', altrimenti il primo
 // asset con un source (l'immagine vive su Artwork.assets, non sull'item).
 function imageSourceOf(artwork: Artwork | null): string | null {
@@ -146,7 +141,6 @@ function PlayerPage() {
     ctxVisit && ctxVisit.id === visitId ? ctxVisit : null,
   );
   const [err, setErr] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ title: string; body: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const recRef = useRef<RecognitionHandle | null>(null);
@@ -257,14 +251,11 @@ function PlayerPage() {
 
   const grid: VariantGrid = useMemo(() => buildGrid(stepItems), [stepItems]);
 
-  // Variante da mostrare: la preferenza di sessione, o il registro proposto
-  // dall'autore della visita al primo ingresso.
+  // Variante da mostrare: l'item iniziale scelto dall'autore finché il
+  // visitatore non adatta registro o durata; da quel momento prevale la sua
+  // preferenza di sessione. defaultRegister copre le visite storiche.
   const variant: Variant | null = useMemo(
-    () =>
-      resolveVariant(grid, {
-        register: pref.register ?? step?.defaultRegister ?? null,
-        minutes: pref.minutes,
-      }),
+    () => resolveStepVariant(grid, pref, step?.defaultItemId, step?.defaultRegister ?? null),
     [grid, pref, step],
   );
   const currentItemId = variant?.item.id;
@@ -275,7 +266,12 @@ function PlayerPage() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2500);
+    // Le risposte brevi (autore/stile/errori) spariscono rapidamente; quelle
+    // logistiche restano abbastanza da leggere senza diventare un dialog da
+    // chiudere. Il limite evita che un testo anomalo blocchi la schermata.
+    const words = toast.trim().split(/\s+/).length;
+    const duration = Math.min(6500, Math.max(2500, words * 340));
+    const t = setTimeout(() => setToast(null), duration);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -385,7 +381,7 @@ function PlayerPage() {
   const showAuthor = useCallback(async () => {
     const a = await getArtwork();
     if (a?.artist) {
-      setModal({ title: "Autore", body: a.year ? `${a.artist} (${a.year})` : a.artist });
+      setToast(`Autore: ${a.year ? `${a.artist} (${a.year})` : a.artist}`);
     } else {
       setToast("Autore non disponibile");
     }
@@ -395,19 +391,20 @@ function PlayerPage() {
     const a = await getArtwork();
     const parts = [a?.style, a?.category].filter(Boolean);
     if (parts.length) {
-      setModal({ title: "Stile", body: parts.join(" · ") });
+      setToast(`Stile: ${parts.join(" · ")}`);
     } else {
       setToast("Stile non disponibile");
     }
   }, [getArtwork]);
 
   const showLogistics = useCallback(
-    (key: LogisticsKey) => {
+    (key: LogisticsKey, speak = false) => {
       const text = museum?.logistics?.[key];
-      if (!text) return setToast("Informazione non disponibile");
-      setModal({ title: labelLogistics(key), body: text });
+      const answer = formatLogisticsToast(text);
+      setToast(answer);
+      if (speak) playTts(answer);
     },
-    [museum],
+    [museum, playTts],
   );
 
   /**
@@ -489,8 +486,8 @@ function PlayerPage() {
         has(label.toLowerCase(), ...LOGISTICS_SYNONYMS[key]),
       );
       if (logistic) {
-        showLogistics(logistic.key);
-        return false;
+        showLogistics(logistic.key, true);
+        return true;
       }
       setToast(`Comando non riconosciuto: "${text}"`);
       setSheetOpen(true);
@@ -580,8 +577,9 @@ function PlayerPage() {
   //
   // I comandi di variante cambiano il testo a schermo e chiudono la tendina
   // (l'esito va mostrato) — ma solo se hanno davvero cambiato qualcosa, così il
-  // Toast di indisponibilità si legge nel suo contesto; autore/stile aprono un
-  // Modal sopra la tendina, che resta aperta per un'altra domanda.
+  // Toast di indisponibilità si legge nel suo contesto. Autore e stile sono
+  // risposte brevi: usano lo stesso Toast, senza interrompere il flusso con un
+  // dialog da chiudere.
   const commandState = useCallback(
     (c: VoiceCommand) => {
       if (c.kind === "variant") {
@@ -608,6 +606,14 @@ function PlayerPage() {
   const isLast = idx >= total - 1;
   const artworkTitle = currentItem?.content?.title ?? step.title;
   const artworkMeta = [artwork?.artist, artwork?.year].filter(Boolean).join(" · ");
+  const stepTypeLabel =
+    step.type === "logistics_intro"
+      ? "Logistica"
+      : step.type === "transition"
+        ? "Spostamento"
+        : step.type === "optional_item"
+          ? "Tappa opzionale"
+          : "Tappa principale";
 
   return (
     // Altezza fissa e scorrimento confinato al contenuto: il microfono e i
@@ -651,45 +657,47 @@ function PlayerPage() {
           </div>
         </div>
 
-        {/* Blocco opera: l'immagine resta piccola, la voce è protagonista.
-            In ascolto passa in secondo piano. */}
-        {artworkTitle && (
-          <div
-            className={`mt-3.5 flex items-center gap-3.5 transition-opacity ${
-              listening ? "opacity-45" : ""
-            }`}
-          >
-            {currentItemId &&
-              (thumbSrc ? (
-                <img
-                  src={thumbSrc}
-                  alt={artworkTitle}
-                  className="h-[58px] w-[58px] shrink-0 rounded-lg border border-border object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              ) : (
-                <div className="h-[58px] w-[58px] shrink-0 rounded-lg bg-secondary" aria-hidden />
-              ))}
-            <div className="min-w-0">
-              <h1 className="font-display text-[21px] font-semibold leading-tight tracking-[-0.01em]">
-                {artworkTitle}
-              </h1>
-              {artworkMeta && (
-                <p className="mt-1 truncate text-xs text-muted-foreground">{artworkMeta}</p>
-              )}
-            </div>
+        {/* Questo slot resta sempre presente: per opere mostra immagine e metadati,
+            per logistica/spostamenti mostra il tipo di step. La sua altezza fissa
+            impedisce a controlli e testo di saltare quando cambia il contenuto. */}
+        <div
+          className={`mt-3.5 flex h-[64px] items-center gap-3.5 transition-opacity ${
+            listening ? "opacity-45" : ""
+          }`}
+        >
+          {currentItemId &&
+            (thumbSrc ? (
+              <img
+                src={thumbSrc}
+                alt={artworkTitle}
+                className="h-[58px] w-[58px] shrink-0 rounded-lg border border-border object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="h-[58px] w-[58px] shrink-0 rounded-lg bg-secondary" aria-hidden />
+            ))}
+          <div className="max-h-[58px] min-w-0 overflow-hidden">
+            {!currentItemId && (
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground-subtle">
+                {stepTypeLabel}
+              </p>
+            )}
+            <h1 className="max-h-[48px] overflow-hidden font-display text-[21px] font-semibold leading-tight tracking-[-0.01em] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+              {artworkTitle}
+            </h1>
+            {artworkMeta && (
+              <p className="mt-1 truncate text-xs text-muted-foreground">{artworkMeta}</p>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* I due bottoni sono l'unico stato del player: l'etichetta principale dice
-            già cosa sta succedendo (Ascolta / Pausa / Riprendi), quindi non serve
-            una barra che lo ripeta. Niente timer, del resto: speechSynthesis non
-            espone né durata né posizione dell'utterance. Lo Stop si allarga solo
-            quando c'è davvero qualcosa da fermare; comando vocale equivalente:
-            "stop". */}
-        <div className="mt-3.5 flex w-full gap-2">
+        {/* Barra di trasporto a geometria fissa: il controllo principale assorbe
+            lo spazio disponibile e Stop conserva sempre la stessa larghezza.
+            Icone e pulsanti restano montati in tutti gli stati, quindi
+            Ascolta/Pausa/Riprendi non spostano il testo o il footer. */}
+        <div className="mt-3.5 grid h-12 w-full grid-cols-[minmax(0,1fr)_104px] gap-2">
           <button
             disabled={listening}
             onClick={() => {
@@ -707,28 +715,40 @@ function PlayerPage() {
                   ? "Riprendi il racconto"
                   : "Ascolta il racconto"
             }
-            className="flex min-h-[48px] flex-1 items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-all duration-300 ease-in-out disabled:bg-secondary disabled:text-foreground-subtle"
+            className="flex h-12 min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-primary/85 disabled:cursor-not-allowed disabled:bg-secondary disabled:text-foreground-subtle"
           >
-            {playState === "speaking"
-              ? "⏸ Pausa"
-              : playState === "paused"
-                ? "▶ Riprendi"
-                : "▶ Ascolta"}
+            <span
+              className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"
+              aria-hidden
+            >
+              {playState === "speaking" ? (
+                <Pause className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              ) : (
+                <Play className="h-[18px] w-[18px]" strokeWidth={2.25} fill="currentColor" />
+              )}
+            </span>
+            <span>
+              {playState === "speaking" ? "Pausa" : playState === "paused" ? "Riprendi" : "Ascolta"}
+            </span>
           </button>
           <button
             onClick={stopTts}
-            disabled={listening}
+            disabled={listening || playState === "idle"}
             aria-label="Ferma il racconto e riparti dall'inizio"
-            className={`flex min-h-[48px] items-center justify-center whitespace-nowrap rounded-full border border-border bg-background px-4 text-sm font-semibold transition-all duration-300 ease-in-out disabled:opacity-40 ${
-              playState !== "idle" ? "flex-1" : "pointer-events-none w-auto opacity-40"
-            }`}
+            className="flex h-12 min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface-muted px-3 text-sm font-semibold text-foreground transition-colors duration-200 hover:border-border hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-secondary disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-muted disabled:text-foreground-subtle"
           >
-            Stop
+            <span
+              className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"
+              aria-hidden
+            >
+              <Square className="h-[15px] w-[15px]" strokeWidth={2.25} fill="currentColor" />
+            </span>
+            <span>Stop</span>
           </button>
         </div>
 
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
-          <RichText value={content} fallback="—" className="text-sm leading-[1.7]" />
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-3 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
+          <RichText value={content} fallback="—" className="text-[1rem] leading-[1.7]" />
         </div>
       </main>
 
@@ -801,7 +821,7 @@ function PlayerPage() {
             onClick={() => {
               if (isLast) {
                 stopTts();
-                navigate({ to: "/visits" });
+                navigate({ to: "/visit-complete/$visitId", params: { visitId } });
                 return;
               }
               goTo(idx + 1);
@@ -821,14 +841,11 @@ function PlayerPage() {
         >
           {listening ? "Ferma" : "Chiedi a voce"}
         </p>
-      </footer>
 
-      {modal && (
-        <Modal title={modal.title} onClose={() => setModal(null)}>
-          {modal.body}
-        </Modal>
-      )}
-      {toast && <Toast message={toast} />}
+        {/* Il feedback è ancorato sopra i comandi, non sull'header: resta nel
+            contesto dell'azione e non copre indietro, mappa o account. */}
+        {toast && <Toast message={toast} className="absolute bottom-full left-5 right-5 mb-3" />}
+      </footer>
     </div>
   );
 }
@@ -929,7 +946,7 @@ function CommandPager({
                     className={`min-h-[44px] min-w-0 truncate rounded-full border border-line px-3 text-[12.5px] transition-colors active:scale-95 ${
                       unavailable
                         ? "bg-transparent font-medium text-muted-foreground"
-                        : "bg-card font-semibold text-foreground"
+                        : "bg-card font-medium text-foreground"
                     }`}
                   >
                     {c.label}
@@ -958,7 +975,9 @@ function CommandPager({
             <span
               key={group.label}
               className={`h-2 rounded-full transition-all ${
-                i === page ? "w-5 bg-primary" : "w-2 bg-foreground-subtle"
+                i === page
+                  ? "w-5 bg-primary"
+                  : "w-2 bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.16)]"
               }`}
             />
           ))}
@@ -1030,7 +1049,3 @@ const LOGISTICS_SYNONYMS: Record<LogisticsKey, string[]> = {
   shop: ["negozio", "bookshop"],
   obstacles: ["barriere", "accessibilità", "accessibilita"],
 };
-
-function labelLogistics(k: LogisticsKey) {
-  return LOGISTICS.find((l) => l.key === k)?.label ?? k;
-}

@@ -37,10 +37,7 @@ function VisitDetail() {
   }, [visitId]);
 
   if (!token) return <Navigate to="/login" />;
-  if (err)
-    return (
-      <ErrorScreen message={err} onRetry={() => setReloadKey((k) => k + 1)} />
-    );
+  if (err) return <ErrorScreen message={err} onRetry={() => setReloadKey((k) => k + 1)} />;
 
   const artworkCount = visit ? visit.steps.filter((s) => (s.itemIds?.length ?? 0) > 0).length : 0;
   const meta = visit
@@ -88,9 +85,7 @@ function VisitDetail() {
               <div className="h-36 w-full rounded-2xl bg-secondary" aria-hidden />
             )}
             <h1 className="mt-5 text-3xl font-bold leading-tight">{visit.title}</h1>
-            {meta && (
-              <p className="mt-2 text-sm text-muted-foreground">{meta}</p>
-            )}
+            {meta && <p className="mt-2 text-sm text-muted-foreground">{meta}</p>}
             <RichText
               value={visit.description}
               className="mt-4 text-base leading-relaxed text-muted-foreground"
@@ -104,18 +99,14 @@ function VisitDetail() {
             {visit.steps.map((s, i) => (
               <li
                 key={i}
-                className="flex items-start gap-4 border-b border-border py-4 last:border-b-0"
+                className="flex items-center gap-4 border-b border-border py-4 last:border-b-0"
               >
                 <span className="w-8 shrink-0 font-display text-lg font-bold leading-none tabular-nums">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1 leading-none">
-                  <span className={badgeClassForType(s.type)}>
-                    {labelForType(s.type)}
-                  </span>
-                  {s.title && (
-                    <div className="mt-1 text-base font-semibold">{s.title}</div>
-                  )}
+                  <span className={badgeClassForType(s.type)}>{labelForType(s.type)}</span>
+                  {s.title && <div className="mt-1 text-base font-semibold">{s.title}</div>}
                 </div>
               </li>
             ))}

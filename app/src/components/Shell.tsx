@@ -59,9 +59,12 @@ export function Modal({
   );
 }
 
-export function Toast({ message }: { message: string }) {
+export function Toast({ message, className = "" }: { message: string; className?: string }) {
   return (
-    <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full bg-card px-5 py-3 text-card-foreground shadow-lg border border-border">
+    <div
+      role="status"
+      className={`z-50 rounded-2xl border border-border bg-card px-4 py-3 text-center text-sm leading-snug text-card-foreground shadow-popover ${className}`}
+    >
       {message}
     </div>
   );

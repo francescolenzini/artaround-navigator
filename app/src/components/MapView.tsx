@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../lib/AppContext";
-import type { FloorConfig, Visit, VisitStep } from "../lib/types";
+import type { ArtworkMapLocation, FloorConfig, Visit, VisitStep } from "../lib/types";
 import { useMapZoomPan } from "../lib/useMapZoomPan";
 import { AccountMenu, BackLink } from "./Nav";
 
@@ -22,24 +22,36 @@ export function MapView({
   onBack: () => void;
   onGoToStep?: (index: number) => void;
 }) {
-  const { museum } = useApp();
+  const { museum, museumConfig } = useApp();
   const [activePin, setActivePin] = useState<number | null>(currentStepIndex);
   const map = useMapZoomPan();
 
-  // I piani (etichetta + immagine mappa) arrivano dalla configurazione del museo,
-  // così il Navigator resta generico e multi-museo. Fallback a un'unica mappa
-  // (museum.mapImage) per i musei che non definiscono piani.
-  const floors: FloorConfig[] =
-    museum?.floors && museum.floors.length > 0
-      ? museum.floors
-      : [{ floor: 0, label: "Mappa", image: museum?.mapImage ?? "" }];
+  // Etichette e immagini delle planimetrie arrivano esclusivamente dalla
+  // configurazione statica; i dati editoriali del museo restano separati.
+  const floors: FloorConfig[] = museumConfig?.floors ?? [];
+  const artworkLocations = museumConfig?.artworkLocations ?? {};
   const singleFloor = floors.length <= 1;
+  const configuredFloorCodes = new Set(floors.map((item) => item.floor));
+  const unconfiguredFloors = [
+    ...new Set(
+      (visit?.steps ?? [])
+        .map((step) => locationFor(step, artworkLocations)?.floor)
+        .filter(
+          (value): value is number => value !== undefined && !configuredFloorCodes.has(value),
+        ),
+    ),
+  ].sort((a, b) => a - b);
 
   // Si apre sul piano della tappa di provenienza, non sul primo della lista:
   // chi arriva dal player si aspetta di vedersi già sulla mappa giusta.
+  const requestedStartFloor =
+    currentStepIndex != null
+      ? locationFor(visit?.steps[currentStepIndex], artworkLocations)?.floor
+      : undefined;
   const startFloor =
-    (currentStepIndex != null ? visit?.steps[currentStepIndex]?.mapLocation?.floor : undefined) ??
-    floors[0].floor;
+    requestedStartFloor !== undefined && configuredFloorCodes.has(requestedStartFloor)
+      ? requestedStartFloor
+      : (floors[0]?.floor ?? 0);
   const [floor, setFloor] = useState<number>(startFloor);
 
   // Allinea il piano selezionato quando la config del museo diventa disponibile.
@@ -48,10 +60,14 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [museum]);
 
-  const pins = layoutPins(visit?.steps ?? [], floor, singleFloor);
-  const mapSrc = floors.find((f) => f.floor === floor)?.image ?? floors[0].image;
+  const pins = layoutPins(visit?.steps ?? [], floor, artworkLocations);
+  const mapSrc = floors.find((f) => f.floor === floor)?.image ?? "";
   const selected = activePin != null ? visit?.steps[activePin] : undefined;
+  const selectedLocation = locationFor(selected, artworkLocations);
   const total = visit?.steps.length ?? 0;
+  const missingLocations = (visit?.steps ?? []).filter(
+    (step) => step.artworkId && !locationFor(step, artworkLocations),
+  ).length;
   const { view, natural } = map;
 
   const changeFloor = (next: number) => {
@@ -96,6 +112,16 @@ export function MapView({
       {/* Planimetria: zoom e pan dentro un riquadro di altezza fissa. Immagine e
           pin stanno nello stesso stage trasformato, così restano allineati. */}
       <div className="px-5 pt-3.5">
+        {unconfiguredFloors.length > 0 && (
+          <p
+            role="status"
+            className="mb-3 rounded-xl border border-primary/30 bg-card px-3 py-2 text-xs text-foreground"
+          >
+            Planimetria non configurata per{" "}
+            {unconfiguredFloors.length === 1 ? "il piano" : "i piani"}{" "}
+            {unconfiguredFloors.join(", ")}. Le relative opere non sono mostrate sulla mappa.
+          </p>
+        )}
         <div className="relative">
           <div
             ref={map.containerRef}
@@ -190,7 +216,8 @@ export function MapView({
                 {selected.title ?? `Tappa ${activePin + 1}`}
               </div>
               <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-                {selected.mapLocation?.label ? `${selected.mapLocation.label} · ` : ''}Tappa {activePin + 1} di {total}
+                {selectedLocation?.label ? `${selectedLocation.label} · ` : ""}Tappa {activePin + 1}{" "}
+                di {total}
               </div>
             </div>
             {onGoToStep && (
@@ -209,6 +236,12 @@ export function MapView({
               : pins.length === 0
                 ? "Nessuna tappa di questa visita su questo piano."
                 : "Pizzica per lo zoom, tocca un pin per vedere la tappa."}
+          </p>
+        )}
+        {missingLocations > 0 && (
+          <p role="status" className="mt-2.5 text-center text-[11px] text-foreground-subtle">
+            {missingLocations} {missingLocations === 1 ? "tappa non ha" : "tappe non hanno"} una
+            posizione configurata.
           </p>
         )}
         {visit && currentStepIndex != null && (
@@ -258,14 +291,23 @@ function ZoomButton({
  * pixel (i pin sono 32px, la mappa può avere qualsiasi larghezza) e cresce con il
  * numero di tappe del gruppo, così non si toccano mai.
  */
-function layoutPins(steps: VisitStep[], floor: number, singleFloor: boolean) {
+function locationFor(step: VisitStep | undefined, locations: Record<string, ArtworkMapLocation>) {
+  if (!step?.artworkId) return undefined;
+  return locations[step.artworkMapKey || step.artworkId];
+}
+
+function layoutPins(
+  steps: VisitStep[],
+  floor: number,
+  locations: Record<string, ArtworkMapLocation>,
+) {
   const groups = new Map<string, { x: number; y: number; items: { s: VisitStep; i: number }[] }>();
 
   steps.forEach((s, i) => {
-    if (!s.mapLocation) return;
-    if (!singleFloor && s.mapLocation.floor !== floor) return;
-    const key = `${s.mapLocation.x}-${s.mapLocation.y}`;
-    const group = groups.get(key) ?? { x: s.mapLocation.x, y: s.mapLocation.y, items: [] };
+    const location = locationFor(s, locations);
+    if (!location || location.floor !== floor) return;
+    const key = `${location.x}-${location.y}`;
+    const group = groups.get(key) ?? { x: location.x, y: location.y, items: [] };
     group.items.push({ s, i });
     groups.set(key, group);
   });

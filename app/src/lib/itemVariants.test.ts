@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { buildGrid, durationLabel, neighbour, parseMinutes, resolveVariant } from "./itemVariants";
+import {
+  buildGrid,
+  durationLabel,
+  neighbour,
+  parseMinutes,
+  resolveStepVariant,
+  resolveVariant,
+} from "./itemVariants";
 import type { ArtworkItem } from "./types";
 
 /** Item minimo: contano solo registro e durata, il resto è rumore per questi test. */
-function item(register: string, fruitionLength?: string, extra?: { seconds?: number }): ArtworkItem {
+function item(
+  register: string,
+  fruitionLength?: string,
+  extra?: { seconds?: number },
+): ArtworkItem {
   return {
     id: `${register}-${fruitionLength ?? "na"}-${extra?.seconds ?? ""}`,
     artworkId: "art-1",
@@ -102,6 +113,47 @@ describe("resolveVariant", () => {
     // prima della preferenza per il registro basso.
     const sparse = buildGrid([item("infantile", "1min"), item("avanzato", "1min")]);
     expect(resolveVariant(sparse, { register: "medio", minutes: 1 })?.register).toBe("avanzato");
+  });
+});
+
+describe("resolveStepVariant", () => {
+  const grid = buildGrid(SEED_LIKE);
+
+  it("usa esattamente l’item iniziale quando non esiste una preferenza di sessione", () => {
+    const expected = grid.variants.find(
+      (variant) => variant.register === "medio" && variant.minutes === 4,
+    )!;
+    const resolved = resolveStepVariant(
+      grid,
+      { register: null, minutes: null },
+      expected.item.id,
+      "elementare",
+    );
+    expect(resolved?.item.id).toBe(expected.item.id);
+  });
+
+  it("dopo un adattamento dà precedenza alla preferenza del visitatore", () => {
+    const defaultVariant = grid.variants.find(
+      (variant) => variant.register === "elementare" && variant.minutes === 1,
+    )!;
+    const resolved = resolveStepVariant(
+      grid,
+      { register: "medio", minutes: 4 },
+      defaultVariant.item.id,
+      "elementare",
+    );
+    expect(resolved?.register).toBe("medio");
+    expect(resolved?.minutes).toBe(4);
+  });
+
+  it("mantiene il fallback sul registro delle visite storiche", () => {
+    const resolved = resolveStepVariant(
+      grid,
+      { register: null, minutes: null },
+      undefined,
+      "avanzato",
+    );
+    expect(resolved?.register).toBe("avanzato");
   });
 });
 

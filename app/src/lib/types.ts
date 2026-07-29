@@ -4,22 +4,36 @@ export interface FloorConfig {
   image: string;
 }
 
+export interface ArtworkMapLocation {
+  label: string;
+  floor: number;
+  x: number;
+  y: number;
+}
+
 export interface MuseumConfig {
   museumSlug: string;
-  museumId?: string;
+  marketplaceUrl?: string;
+  floors: FloorConfig[];
+  /** Posizioni statiche, indicizzate dalla chiave restituita da una tappa. */
+  artworkLocations?: Record<string, ArtworkMapLocation>;
+}
+
+export interface MuseumLogistics {
+  exit: string;
+  toilet?: string;
+  bar?: string;
+  shop?: string;
+  obstacles?: string;
+}
+
+export interface MuseumData {
+  id: string;
   name: string;
-  coverImage: string;
-  mapImage: string;
-  /** Piani con mappa dedicata. Se assente/vuoto il Navigator usa mapImage come mappa unica. */
-  floors?: FloorConfig[];
-  marketplaceUrl: string;
-  logistics: {
-    exit: string;
-    toilet: string;
-    bar: string;
-    shop: string;
-    obstacles: string;
-  };
+  coverImage?: string;
+  logistics: MuseumLogistics;
+  defaultLanguage: string;
+  supportedLanguages: string[];
 }
 
 export interface ApiConfig {
@@ -44,12 +58,7 @@ export interface VisitSummary {
   coverImage?: string;
 }
 
-export type LanguageRegister =
-  | "infantile"
-  | "elementare"
-  | "medio"
-  | "avanzato"
-  | "specialistico";
+export type LanguageRegister = "infantile" | "elementare" | "medio" | "avanzato" | "specialistico";
 
 /** Scala ordinata dei registri, dal più semplice al più specialistico. */
 export const REGISTER_ORDER: LanguageRegister[] = [
@@ -68,14 +77,16 @@ export interface VisitStep {
    * Una tappa = un'opera, con tutte le sue varianti disponibili in visita.
    * Registro e durata di ciascuna si leggono da `ArtworkItem.classification`:
    * la griglia dei due assi la costruisce `lib/itemVariants.ts`, non lo step.
-  */
+   */
   artworkId?: string;
   itemIds?: string[];
-  /** Registro proposto per primo nel player, prima della preferenza del visitatore. */
+  /** Variante editoriale proposta al primo ingresso, prima della preferenza del visitatore. */
+  defaultItemId?: string;
+  /** Compatibilità con le visite salvate prima dell’introduzione di defaultItemId. */
   defaultRegister?: LanguageRegister;
   description?: string;
-  /** Proiezione in lettura della collocazione dell'opera, non persistita nello step. */
-  mapLocation?: { label: string; floor: number; x: number; y: number };
+  /** Chiave stabile per cercare la posizione in museum.config.json. */
+  artworkMapKey?: string;
   order?: number;
 }
 

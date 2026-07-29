@@ -10,7 +10,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { apiConfig, museum, loading, error, reload, setAuth } = useApp();
+  const { apiConfig, loading, error, reload, setAuth } = useApp();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -52,11 +52,6 @@ function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10">
       <div className="w-full max-w-sm">
-        {museum?.name && (
-          <p className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            {museum.name}
-          </p>
-        )}
         <div className="flex items-center justify-center" aria-hidden>
           <span className="font-display text-4xl font-bold">ArtAround</span>
         </div>

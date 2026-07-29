@@ -19,7 +19,7 @@ Progetto **autonomo**: si sviluppa e si esegue anche da solo, senza il repo
 .
 ├── app/                       # applicazione (unico artefatto buildato)
 │   ├── index.html
-│   ├── package.json / package-lock.json / bun.lock / bunfig.toml
+│   ├── package.json / package-lock.json
 │   ├── vite.config.ts / tsconfig.json / eslint.config.js / components.json
 │   ├── .prettierrc / .prettierignore
 │   ├── src/                    # main.tsx, router.tsx, routes/, components/, hooks/, lib/
@@ -55,26 +55,6 @@ questa struttura — tipi e mock-data non referenziati da nessun file sotto
 risolve al vero `app/src/lib/types.ts`, non al file alla radice). Sono stati
 spostati in `_to_delete/` insieme alla vecchia cartella `navigator/` ora vuota:
 puoi rimuoverli.
-
-### Riferimenti a Lovable rimossi
-
-Il progetto era stato generato da Lovable (vedi template originario
-`tanstack_start_ts_current`). Rimossi in questa ristrutturazione, perché non
-servono più fuori dal sandbox Lovable:
-
-- `app/.lovable/` — solo metadati IDE (schemaVersion, template, revision), non
-  referenziati da alcun codice.
-- `app/src/lib/lovable-error-reporting.ts` — inviava gli errori a
-  `window.__lovableEvents`, un hook che esiste solo dentro il sandbox Lovable;
-  fuori era un no-op silenzioso. Rimosso insieme al suo utilizzo in
-  `app/src/routes/__root.tsx` (import e `useEffect` dedicato), mantenendo il
-  `console.error(error)` già presente come logging dell'errore.
-
-Nello stesso passaggio sono stati rimossi anche due file orfani non legati a
-Lovable ma della stessa origine (residui SSR pre-migrazione, non importati da
-nessuna parte): `app/src/lib/error-capture.ts` e `app/src/lib/error-page.ts`
-(il primo faceva riferimento esplicito a `server.ts`, già rimosso). Tutti e
-quattro sono in `_to_delete/`.
 
 ---
 
@@ -133,13 +113,12 @@ c'è default: `BACKEND_URL` va sempre passato esplicitamente.
 ### `museum.config.json`: non è un segreto
 
 A differenza di `api.config.json`, `app/public/museum.config.json` **è
-committato** (contiene `museumSlug`, testi, riferimenti alle mappe): non è un
-segreto, è la configurazione del museo con cui l'app viene personalizzata.
-Nota ereditata dal progetto: il campo `editorUrl` al suo interno è ancora
-hardcoded (`http://localhost:5174`) — noto e già segnalato nella
-documentazione del progetto come da rendere configurabile in vista del deploy
-reale; non l'ho toccato in questa ristrutturazione perché esula dalla
-dockerizzazione.
+committato**: non è un database editoriale, ma contiene esclusivamente
+`museumSlug`, l'eventuale `marketplaceUrl` di deployment e `floors`, che associa
+i codici numerici di piano alle planimetrie statiche. Nome, copertina, logistica
+e lingue vengono risolti dal documento `Museum` tramite API dopo il login. Il
+valore locale di `marketplaceUrl` punta a `http://localhost:5174`; in produzione
+va sostituito con l'URL reale dell'Editor.
 
 ### Bind-mount + volume per `node_modules`
 
@@ -214,4 +193,3 @@ di consegna finale.
 | Il Navigator non raggiunge un backend sull'host (Linux) | `host.docker.internal` non risolto | verifica `extra_hosts: host-gateway` nel compose di sviluppo |
 | HMR lento o assente | watch su bind-mount (macOS/Windows) | già mitigato da `CHOKIDAR_USEPOLLING=true`; un piccolo ritardo è normale |
 | `npm run build` fallisce nello stage `build` | dipendenza mancante/incompatibile | verifica `app/package-lock.json`; prova `npm ci` in locale fuori da Docker per isolare l'errore |
-

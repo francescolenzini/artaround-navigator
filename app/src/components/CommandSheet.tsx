@@ -89,7 +89,7 @@ export function CommandSheet({
         inert={!open}
       >
         <div className="overflow-hidden">
-          <div className="border-y border-line bg-surface-muted px-5 pb-3 pt-3">{children}</div>
+          <div className="border-y border-line bg-background px-5 pb-3 pt-3">{children}</div>
         </div>
       </div>
     </div>

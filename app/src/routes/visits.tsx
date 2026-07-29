@@ -18,13 +18,13 @@ function VisitsPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!apiConfig || !museum || !museumReady || !token || !museum.museumId) return;
+    if (!apiConfig || !museum || !museumReady || !token) return;
     setErr(null);
     setVisits(null);
     apiFetch<ListResponse<VisitSummary>>(
       apiConfig,
       token,
-      `/visits?museumId=${encodeURIComponent(museum.museumId)}&pageSize=50`,
+      `/visits?museumId=${encodeURIComponent(museum.id)}&pageSize=50`,
     )
       .then((r) => setVisits(r.data))
       .catch((e) => setErr(getErrorMessage(e)));
@@ -32,10 +32,7 @@ function VisitsPage() {
 
   if (!token) return <Navigate to="/login" />;
   if (!museum || !museumReady) return <LoadingScreen />;
-  if (err)
-    return (
-      <ErrorScreen message={err} onRetry={() => setReloadKey((k) => k + 1)} />
-    );
+  if (err) return <ErrorScreen message={err} onRetry={() => setReloadKey((k) => k + 1)} />;
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-background pb-8 text-foreground">
@@ -49,26 +46,30 @@ function VisitsPage() {
           <HeaderActions onMap={() => navigate({ to: "/map", search: { from: "visits" } })} />
         </div>
         <h1 className="font-display text-[29px] font-semibold tracking-[-0.02em]">
-          Visite disponibili
+          Scegli la tua visita
         </h1>
-        {/* Intro: spiega il modello applicativo a chi non lo conosce, prima che
-            debba dedurlo dai comandi del player. Stessa resa tipografica del
-            paragrafo di descrizione in visit.$visitId.tsx, per coerenza. */}
-        <p className="mt-3.5 text-base leading-relaxed text-muted-foreground">
+        {/* Intro breve e accogliente: chiarisce subito il valore della guida,
+            senza rubare attenzione alle card delle visite. */}
+        <p className="mt-3.5 text-base leading-[1.55] text-muted-foreground">
           {firstNameOf(user?.fullName) ? (
             <>
-              Benvenuto <b className="font-semibold text-foreground">{firstNameOf(user?.fullName)}</b>.{" "}
+              <b className="font-semibold text-foreground">
+                Benvenuto, {firstNameOf(user?.fullName)}.
+              </b>
+              <br />
             </>
           ) : (
-            <>Benvenuto. </>
+            <>
+              <b className="font-semibold text-foreground">Benvenuto.</b>
+              <br />
+            </>
           )}
-          ArtAround ti guida lungo l'itinerario che scegli: a ogni tappa ascolti il
-          racconto dell'opera e puoi chiedere a voce di dirti di più, di meno, o dove
-          andare.
+          ArtAround ti accompagna tappa dopo tappa, tra storie, curiosità e indicazioni. Quando
+          vuoi, chiedi a voce di approfondire o di indicarti la strada.
         </p>
       </header>
 
-      <div className="mt-6 flex flex-col gap-3 px-5">
+      <div className="mt-5 flex flex-col gap-3 px-5">
         {!visits && <p className="text-muted-foreground">Caricamento…</p>}
         {visits?.length === 0 && (
           <p className="text-muted-foreground">Nessuna visita disponibile.</p>
@@ -100,13 +101,9 @@ function VisitsPage() {
                 <div className="h-14 w-14 shrink-0 rounded-lg bg-secondary" aria-hidden />
               )}
               <div className="min-w-0 flex-1">
-                <h3 className="font-display text-base font-bold leading-snug">
-                  {v.title}
-                </h3>
+                <h3 className="font-display text-base font-bold leading-snug">{v.title}</h3>
                 {v.subtitle && (
-                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                    {v.subtitle}
-                  </p>
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">{v.subtitle}</p>
                 )}
                 {(v.estimatedDurationMinutes || v.targetAudience) && (
                   <p className="mt-1 flex items-center text-sm text-muted-foreground">
