@@ -182,6 +182,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setMuseum(null);
     setMuseumReady(false);
+    // L'errore globale altrimenti continuerebbe a coprire la route di login:
+    // l'utente non potrebbe sostituire una sessione senza accesso al museo.
+    setError(null);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -247,7 +251,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const resolvedMuseum = payload.data?.[0];
 
           if (!resolvedMuseum) {
-            throw new Error(`Museo non trovato per slug ${museumSlug}`);
+            throw new Error(
+              "Il museo configurato non è disponibile per questo account. Esci e accedi con un altro account.",
+            );
           }
 
           setMuseum(resolvedMuseum);

@@ -62,10 +62,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 function AppGate({ children }: { children: ReactNode }) {
-  const { loading, error, reload } = useApp();
+  const { loading, error, reload, token, logout } = useApp();
 
   if (loading) return <LoadingScreen />;
-  if (error) return <ErrorScreen message={error} onRetry={reload} />;
+  if (error)
+    return <ErrorScreen message={error} onRetry={reload} onLogout={token ? logout : undefined} />;
 
   return children;
 }

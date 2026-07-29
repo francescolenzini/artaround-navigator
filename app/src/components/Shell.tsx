@@ -1,17 +1,37 @@
 import type { ReactNode } from "react";
 
-export function ErrorScreen({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorScreen({
+  message,
+  onRetry,
+  onLogout,
+}: {
+  message: string;
+  onRetry?: () => void;
+  onLogout?: () => void;
+}) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center text-foreground">
       <h1 className="text-2xl font-semibold text-primary">Errore</h1>
       <p className="text-lg text-muted-foreground max-w-md">{message}</p>
-      {onRetry && (
-        <button
-          onClick={onRetry}
-          className="min-h-[44px] rounded-lg bg-primary px-6 py-3 text-lg font-semibold text-primary-foreground"
-        >
-          Riprova
-        </button>
+      {(onRetry || onLogout) && (
+        <div className="flex flex-wrap justify-center gap-3">
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="min-h-[44px] rounded-lg bg-primary px-6 py-3 text-lg font-semibold text-primary-foreground"
+            >
+              Riprova
+            </button>
+          )}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="min-h-[44px] rounded-lg border border-border bg-card px-6 py-3 text-lg font-semibold text-foreground"
+            >
+              Esci e cambia account
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
